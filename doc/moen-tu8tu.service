@@ -1,0 +1,12 @@
+[Unit]
+Description=moen spider
+After=network.target
+
+[Service]
+Type=forking
+EnvironmentFile=/etc/conf.d/moen-tu8tu.conf
+WorkingDirectory=/alidata/server/moen
+ExecStart=/bin/sh -c '${CELERY_BIN} multi start ${CELERYD_NODES} -A ${CELERY_APP} --pidfile=${CELERYD_PID_FILE} --logfile=${CELERYD_LOG_FILE} -l INFO ${CELERYD_OPTS}'
+
+[Install]
+WantedBy=multi-user.target
