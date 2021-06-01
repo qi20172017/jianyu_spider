@@ -79,7 +79,7 @@ def tu8tu(self, page, key_word):
 
     response = requests.request("POST", url, headers=headers, json=payload, verify=False)
     raw_data = response.text
-    print(response.text)
+    # print(response.text)
     if raw_data:
         raw_data = json.loads(raw_data)
         article_list = raw_data["result"]["commonFeedVos"]
@@ -91,7 +91,7 @@ def tu8tu(self, page, key_word):
         for article in article_list:
             result_data = {}
 
-            print(article)
+            # print(article)
             result_data["brand"] = key_word
             result_data["title"] = safe_get(article, "cover", "title")
             result_data["nickname"] = safe_get(article, "bottom", "title")
@@ -126,76 +126,10 @@ def tu8tu(self, page, key_word):
                     # tu8tu_question(result_data)
                     moenApp.send_task("moen.tu8tu.question", args=(result_data,))
 
-            print("--------------")
+            print("-------Muto-------")
 
 
-# def tu8tu_user():
-#     import requests
-#
-#     url = "https://apigwc2.huhudi.com/cgi/ics/personal/userInfo?uid=16864430&ticket=HuOZZ1GxtxxSlPJOliULlnKd8bWD3n37A_pRAtJPxLG2_2yqGX4aoEydOT8Nai_G8lHstaeUwjFPwXxrBgzXWSktaErR8Zp9ErtaOEVYqhdyyedAVivc_LFWAXgO1Uar&source=tbt-app&accountId=24365073"
-#
-#     payload = {
-#         "args": {
-#             "pubArgs": {
-#                 "channel": "小米",
-#                 "appversion": "8.17.3",
-#                 "systemversion": "25",
-#                 "apkPackageName": "com.to8to.housekeeper",
-#                 "appid": "15",
-#                 "version": "2.5",
-#                 "appostype": "1",
-#                 "appversioncode": "91730",
-#                 "cityName": "上海",
-#                 "deviceModel": "sailfish-Pixel",
-#                 "device": "google-Pixel",
-#                 "first_id": "633540b26c1363ba493fb03c9b0641a1",
-#                 "isnew": "0",
-#                 "uid": "16864430",
-#                 "ticket": "HuOZZ1GxtxxSlPJOliULlnKd8bWD3n37A_pRAtJPxLG2_2yqGX4aoEydOT8Nai_G8lHstaeUwjFPwXxrBgzXWSktaErR8Zp9ErtaOEVYqhdyyedAVivc_LFWAXgO1Uar",
-#                 "to8to_token": "HuOZZ1GxtxxSlPJOliULlnKd8bWD3n37A_pRAtJPxLG2_2yqGX4aoEydOT8Nai_G8lHstaeUwjFPwXxrBgzXWSktaErR8Zp9ErtaOEVYqhdyyedAVivc_LFWAXgO1Uar",
-#                 "accountId": "24365073",
-#                 "cityId": "1103",
-#                 "cityid": "1103",
-#                 "imei": "633540b26c1363ba493fb03c9b0641a1",
-#                 "t8t_device_id": "633540b26c1363ba493fb03c9b0641a1"
-#             },
-#             "uid": "16864430",
-#             "userType": 1,
-#             "targetUid": "5776436"
-#         }}
-#     headers = {
-#         'device': 'google-Pixel',
-#         'isnew': '0',
-#         'apkpackagename': 'com.to8to.housekeeper',
-#         'cityid': '1103',
-#         'appid': '15',
-#         'ticket': 'HuOZZ1GxtxxSlPJOliULlnKd8bWD3n37A_pRAtJPxLG2_2yqGX4aoEydOT8Nai_G8lHstaeUwjFPwXxrBgzXWSktaErR8Zp9ErtaOEVYqhdyyedAVivc_LFWAXgO1Uar',
-#         'cityname': '%E4%B8%8A%E6%B5%B7',
-#         'to8to_token': 'HuOZZ1GxtxxSlPJOliULlnKd8bWD3n37A_pRAtJPxLG2_2yqGX4aoEydOT8Nai_G8lHstaeUwjFPwXxrBgzXWSktaErR8Zp9ErtaOEVYqhdyyedAVivc_LFWAXgO1Uar',
-#         'first_id': '633540b26c1363ba493fb03c9b0641a1',
-#         't8t_device_id': '633540b26c1363ba493fb03c9b0641a1',
-#         'appversioncode': '91730',
-#         'imei': '633540b26c1363ba493fb03c9b0641a1',
-#         'systemversion': '25',
-#         'appversion': '8.17.3',
-#         'appostype': '1',
-#         'accountid': '24365073',
-#         'version': '2.5',
-#         'uid': '16864430',
-#         'devicemodel': 'sailfish-Pixel',
-#         'channel': '%E5%B0%8F%E7%B1%B3',
-#         'user-agent': 'to8to_andr/8.17.3 (google;Pixel;Android 7.1.2) channel/%E5%B0%8F%E7%B1%B3',
-#         'referer': 'https://to8to.com',
-#         'content-type': 'application/json; charset=utf-8',
-#         'content-length': '916',
-#         'accept-encoding': 'gzip',
-#         'Pragma': 'no-cache',
-#         'Cache-Control': 'no-cache'
-#     }
-#
-#     response = requests.request("POST", url, headers=headers, json=payload, verify=False)
-#
-#     print(response.text)
+
 @moenApp.task(
     name='moen.tu8tu.picture',
     bind=True,
@@ -470,6 +404,7 @@ def tu8tu_diary(self, item_data):
 
                         print(item_data)
                         PgTuDao.upsert(**item_data)
+                    print('------Muto-----------------------')
         else:
             print("没有result")
     else:

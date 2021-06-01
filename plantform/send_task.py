@@ -48,5 +48,5 @@ def send_haozu():
 
 
 if __name__ == '__main__':
-    # send_tu8tu()
-    send_haozu()
+    send_tu8tu()
+    # send_haozu()

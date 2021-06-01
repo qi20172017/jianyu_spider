@@ -67,6 +67,7 @@ def haozu(self, page, key_word, list_type=""):
             next_page = page + 1
             save_page("haozu",key_word, next_page)
             moenApp.send_task("moen.haozu.list", args=(next_page, key_word))
+            print('---------------HaoZu----------------------')
         else:
             print("没有更多了")
 
