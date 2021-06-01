@@ -21,7 +21,6 @@ def genter_list_par(keyword="", page="1", count=100, list_type=""):
         "type": list_type
     }
     url = "http://localhost:8080/calcsig"
-    # url = "http://172.16.7.115:8080/calcsig"
 
     headers = {}
 
@@ -42,7 +41,6 @@ def get_info_par(id_type, obj_id):
     arg = {"url": json.dumps(raw_data)}
 
     url = "http://localhost:8080/calcsig1"
-    # url = "http://172.16.7.115:8080/calcsig1"
     headers = {}
 
     response = requests.request("POST", url, headers=headers, json=arg)
