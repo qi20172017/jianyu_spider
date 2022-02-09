@@ -4,7 +4,7 @@ from app.moen_app import moenApp
 def send_tu8tu():
 
     tag_list = [
-        # '摩恩',
+                '摩恩',
                 '九牧',
                 '恒洁',
                 '科勒',
@@ -49,4 +49,4 @@ def send_haozu():
 
 if __name__ == '__main__':
     send_tu8tu()
-    # send_haozu()
+    send_haozu()
