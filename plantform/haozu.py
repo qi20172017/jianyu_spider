@@ -65,7 +65,7 @@ def haozu(self, page, key_word, list_type=""):
                 elif result_data["item_type"] == 5:
                     hao_article(result_data, row)
             next_page = page + 1
-            save_page("haozu",key_word, next_page)
+            # save_page("haozu",key_word, next_page)
             moenApp.send_task("moen.haozu.list", args=(next_page, key_word))
             print('---------------HaoZu----------------------')
         else:

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <div>
+        姓名 <input type="text" id="uname">
+    </div>
+    <div>
+        密码  <input type="password" id="pwd">
+    </div>
+    <button id="btn">提交</button>
+    <div id="show"></div>
+    <script src="/static/jquery.min.js"></script>
+    <script>
+        $(function () {
+            $('#btn').click(function () {
+                //获取用户输入的姓名和密码的值
+                var data = {
+                    "uname":$('#uname').val(),
+                    "pwd":$('#pwd').val()
+                }//JSON对象
+                //将数据转换成JSON字符串
+                var json_str = JSON.stringify(data);
+                console.log(json_str)
+                //通过post方式将数据发送到服务器
+                var xhr = new XMLHttpRequest();
+                xhr.open('post','/post_json_server',true);
+                xhr.onreadystatechange = function () {
+                    if(xhr.readyState == 4 && xhr.status == 200){
+                        // console.log(xhr.responseText);
+                        //将响应内容在#show中显示
+                        //如果登录成功  颜色为绿色  如果登录失败 颜色为红色
+                        var data = JSON.parse(xhr.responseText);
+                        console.log(data);
+                        if(data.code == 200){
+                            $('#show').html(data.msg).css('color','green')
+                        }else{
+                            $('#show').html(data.msg).css('color','red')
+                        }
+                    }
+                }
+                //application/x-www-form-urlencoded指定的是表单数据提交格式
+                // xhr.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+                xhr.setRequestHeader('Content-Type','application/json');
+                xhr.send(json_str);
+            })
+        })
+    </script>
+</body>
+</html>

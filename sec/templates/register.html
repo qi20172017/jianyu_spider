@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>注册页</title>
+</head>
+<body>
+    <div>
+        姓名  <input type="text" id="uname">
+        <span id="show"></span>
+    </div>
+    <div>
+        密码  <input type="password" id="pwd">
+    </div>
+    <button id="btn">注册</button>
+
+    <script src="/static/jquery.min.js"></script>
+    <script>
+        //当#uname失去焦点(blur)时触发
+        // $('#uname').blur(function(){
+        //     //1.创建xhr
+        //     var xhr = new XMLHttpRequest();
+        //     //2.创建get请求
+        //         //获取#uname文本框的值
+        //          //拼接字符串  /check_uname?uname=xxx
+        //     var url = '/check_uname?uname='+$('#uname').val();
+        //     xhr.open('get',url,true);
+        //     //3.监听事件  设置回调函数
+        //     xhr.onreadystatechange = function(){
+        //         //当请求和响应全部完成 同时响应结果正常时
+        //         if(xhr.readyState == 4 && xhr.status==200){
+        //              //取出响应结果  放入#show
+        //              $('#show').html(xhr.responseText);
+        //         }
+        //     }   
+        //     //4.发送请求 
+        //     xhr.send(null);
+        // })
+                
+
+    </script>
+    <script>
+        $(function(){
+            function checkuname(){
+                //res 用于校验用户是否被使用 默认false表示未被使用
+                var res = false;
+                var xhr = new XMLHttpRequest();
+                var url = '/check_uname?uname='+$('#uname').val();
+                xhr.open('get',url,false);//同步 等待结果
+                xhr.onreadystatechange = function(){
+                    if(xhr.readyState == 4 && xhr.status==200){
+                        // $('#show').html(xhr.responseText);
+                        if(xhr.responseText == '1'){
+                            res = true;//表示用户名已被使用
+                            $('#show').html('用户名已存在')
+                        }else{
+                            $('#show').html('OK!')
+                        }
+                    }
+                }  
+                xhr.send(null);
+                return res;
+            }
+            //给uname绑定事件blur
+            $('#uname').blur(function(){
+                checkuname();
+            })
+            //给btn绑定点击事件
+            //如果checkuname()检测成功可以继续注册
+            //否则alert提示用户名已存在 不能注册
+            $('#btn').click(function(){
+                if(checkuname()){
+                    //用户名已存在
+                    alert('用户名已存在 不能注册');
+                }else{
+                    alert('继续注册')
+                }
+            })
+        })
+    </script>
+
+
+</body>
+</html>

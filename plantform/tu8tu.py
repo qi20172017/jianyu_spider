@@ -80,6 +80,7 @@ def tu8tu(self, page, key_word):
     response = requests.request("POST", url, headers=headers, json=payload, verify=False)
     raw_data = response.text
     # print(response.text)
+
     if raw_data:
         raw_data = json.loads(raw_data)
         article_list = raw_data["result"]["commonFeedVos"]
@@ -92,32 +93,33 @@ def tu8tu(self, page, key_word):
             result_data = {}
 
             # print(article)
-            result_data["brand"] = key_word
-            result_data["title"] = safe_get(article, "cover", "title")
+            # result_data["brand"] = key_word
+            result_data["title"] = safe_get(article, "cover", "title")[:10]
             result_data["nickname"] = safe_get(article, "bottom", "title")
             result_data["item_type"] = safe_get(article, "interaction", "moduleCode")
             result_data["item_id"] = str(safe_get(article, "content", "id")) if safe_get(article, "content",
                                                                                          "id") else safe_get(article,
                                                                                                              "content",
                                                                                                              "id")
-            result_data["router"] = safe_get(article, "content", "router")
+            # result_data["router"] = safe_get(article, "content", "router")
             result_data["share_url"] = safe_get(article, "content", "shareUrl")
 
             if result_data["item_id"]:
                 print(result_data)
-                PgTuDao.upsert(**result_data)
+                MyTuDao.upsert(**result_data)
                 if result_data["item_type"] == "beautyChart":
                     # tu8tu_picture(result_data)
 
                     moenApp.send_task("moen.tu8tu.picture", args=(result_data,))
 
                 elif result_data["item_type"] == "diary":
-                    if result_data["router"]:
-                        local_id = re.findall('localeid=(.*?)&di', result_data["router"])
-                        if local_id:
-                            result_data["item_id"] = local_id[0]
-                            # tu8tu_diary(result_data)
-                            moenApp.send_task("moen.tu8tu.diary", args=(result_data,))
+                    pass
+                    # if result_data["router"]:
+                    #     local_id = re.findall('localeid=(.*?)&di', result_data["router"])
+                    #     if local_id:
+                    #         result_data["item_id"] = local_id[0]
+                    #         # tu8tu_diary(result_data)
+                    #         moenApp.send_task("moen.tu8tu.diary", args=(result_data,))
                 elif result_data["item_type"] == "ugcArticle":
                     # tu8tu_article(result_data)
                     moenApp.send_task("moen.tu8tu.article", args=(result_data,))

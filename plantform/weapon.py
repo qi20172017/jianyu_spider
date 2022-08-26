@@ -1,20 +1,20 @@
 import time
-from model.rds import rds_100_2
+from model.rds import rds_local_1
 from app.moen_app import moenApp
 
 
 def save_time(key_word, new_time):
-    raw_data = rds_100_2.hget("moen_time", key_word)
+    raw_data = rds_local_1.hget("moen_time", key_word)
     if raw_data:
         flag_time = int(raw_data.decode())
     else:
-        rds_100_2.hset("moen_time", key_word, new_time)
+        rds_local_1.hset("moen_time", key_word, new_time)
         return
-    rds_100_2.hset("moen_time", key_word, min(int(new_time), flag_time))
+    rds_local_1.hset("moen_time", key_word, min(int(new_time), flag_time))
 
 
 def save_page(plantform, key_word, page):
-    rds_100_2.hset("moen_page", plantform + '_'+ key_word, page)
+    rds_local_1.hset("moen_page", plantform + '_'+ key_word, page)
 
 
 def send_next_page(total, page, key_word):
@@ -33,7 +33,7 @@ def reduced_time(key_word):
     :return:
     """
     target = 1588262400  # 2020-05-01 00:00:00
-    raw_data = rds_100_2.hget("moen_time", key_word)
+    raw_data = rds_local_1.hget("moen_time", key_word)
     if not raw_data:
         flag_time = 1622025566
         save_time(key_word, flag_time)  # 2021-05-26 18:39:26

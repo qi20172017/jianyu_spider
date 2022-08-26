@@ -1,3 +1,5 @@
 .idea
 *.apk
 *.xlsx
+plantform/__pycache__
+*.pyc

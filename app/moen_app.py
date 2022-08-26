@@ -65,12 +65,25 @@ moen_queues = [
         [binding(exchange=moen_exchange, routing_key='moen.haozu.article')],
         queue_arguments={'x-queue-mode': 'lazy'}
     ),
+    Queue(
+        'moen.csdn.article',
+        [binding(exchange=moen_exchange, routing_key='moen.csdn.article')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+    Queue(
+        'moen.sogou.article',
+        [binding(exchange=moen_exchange, routing_key='moen.sogou.article')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
 
 ]
 
+
+# http://127.0.0.1:15672/#/queues  mq地址
+
 MOEN = {
-    # 'broker_url': 'amqp://guest:guest@127.0.0.1:5672/',
-    'broker_url': 'amqp://mquser:123456@10.0.4.104:5672/moen',
+    'broker_url': 'amqp://guest:guest@127.0.0.1:5672/',
+    # 'broker_url': 'amqp://mquser:123456@10.0.4.104:5672/moen',
     # 默认任务配置
     'task_create_missing_queues': True,
     'task_default_delivery_mode': 'persistent',

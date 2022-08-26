@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <button id="btn">显示用户信息</button>
+    <table border="1" cellspacing='0'>
+        <tr>
+            <th>id</th>
+            <th>username</th>
+            <th>pwd</th>
+        </tr>
+        <tbody id="show"></tbody>
+    </table>
+
+    <script src="/static/jquery.min.js"></script>
+    <script>
+        $(function(){
+            $('#btn').click(function(){
+                //1.发送get请求 获取数据
+                var xhr = new XMLHttpRequest();
+                xhr.open('get','/get_user_server',true);
+                xhr.onreadystatechange = function(){
+                    if(xhr.readyState==4 && xhr.status==200){
+                        var msg = xhr.responseText;
+                        console.log(msg);//JSON字符串
+                        //将JSON字符串转换成JSON对象
+                        var json_obj = JSON.parse(msg);
+                        console.log(json_obj);//JSON对象
+                        var html = "";
+                        //使用$.each() 遍历json_obj
+                        // $arr.each(function(){})
+                        $.each(json_obj,function(i,obj){
+                            html += '<tr>';
+                            html += '<td>'+obj.id+'</td>';
+                            html += '<td>'+obj.uname+'</td>';
+                            html += '<td>'+obj.pwd+'</td>';
+                            html += '</tr>'
+                        })
+                        //将html的内容显示在页面#show中
+                        $('#show').html(html);
+
+
+
+
+
+                        //2.将获取的数据解析  在页面中显示
+                        // 1_bob_123456|2_tom_123123|3_hanmeimei_000000
+                        // var users = xhr.responseText.split('|');//取出每一个用户数据 
+                        // console.log(users);
+                        // //根据users的长度  创建tr
+                        // var html = "";
+                        // for(var i = 0;i<users.length;i++){
+                        //     html += '<tr>'
+                        //     var info = users[i].split('_');
+                        //     html += '<td>'+info[0]+'</td>';
+                        //     html += '<td>'+info[1]+'</td>';
+                        //     html += '<td>'+info[2]+'</td>';
+                        //     html += '</tr>'
+                        // }
+                        // //将拼接的内容放入#show中显示
+                        // $('#show').html(html);
+                    }
+                }
+                xhr.send(null)
+            })
+        })
+    </script>
+</body>
+</html>

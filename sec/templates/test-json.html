@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <button id="btn">getJSON</button>
+    <script src="/static/jquery.min.js"></script>
+    <script>
+        var obj = {
+            name:"王老师",
+            age:30
+        }
+        console.log(obj);
+        //JSON对象
+        var json = {
+            "name":"王老师",
+            "age":30
+            }
+        console.log(json);
+        //直接使用数组表示JSON
+        var arr = ['王老师','王夫人','王小超'];
+        var json_arr = [
+            {"name":"王老师","age":30},
+            {"name":"王夫人","age":18},
+            {"name":"王小超","age":20}
+        ]
+    </script>
+</body>
+</html>
