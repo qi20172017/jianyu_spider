@@ -3,3 +3,4 @@
 *.xlsx
 plantform/__pycache__
 *.pyc
+test_spider

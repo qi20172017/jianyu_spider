@@ -25,6 +25,42 @@ def moen_route_task(name, args, kwargs, options, task=None, **kw):
 
 moen_queues = [
     Queue(
+        'bid.jianyu.zl_search',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.zl_search')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
+        'bid.jianyu.search',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.search')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
+        'bid.jianyu.detail',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.detail')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
+        'bid.jianyu.clean',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.clean')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
+        'bid.jianyu.zoo',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.zoo')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
+        'bid.jianyu.captor_cookies',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.captor_cookies')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
         'moen.tu8tu.list',
         [binding(exchange=moen_exchange, routing_key='moen.tu8tu.list')],
         queue_arguments={'x-queue-mode': 'lazy'}
@@ -82,8 +118,8 @@ moen_queues = [
 # http://127.0.0.1:15672/#/queues  mq地址
 
 MOEN = {
-    'broker_url': 'amqp://guest:guest@127.0.0.1:5672/',
-    # 'broker_url': 'amqp://mquser:123456@10.0.4.104:5672/moen',
+    # 'broker_url': 'amqp://guest:guest@127.0.0.1:5672/',
+    'broker_url': 'amqp://guest:use1ful1spi0der7@106.75.36.245:5672/',
     # 默认任务配置
     'task_create_missing_queues': True,
     'task_default_delivery_mode': 'persistent',
