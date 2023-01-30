@@ -1477,21 +1477,42 @@ def send_zl_search():
             "city": "上海"
         }]
 
+    bidMethodList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    # orgTypeList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    # bidProcesseList = [20, 40, 50, 100, 60, 70, 80, 90, 3]
+    # bidIndustryList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+
+
+    count = 0
     for i in range(len(adcodes)):
         item = adcodes[i]
 
         name = item['city']
         adcode = item['adcode']
 
-        data = json.dumps({
-            'page': 1,
-            'adcodes': adcode,
-            'date': yesterday
-        })
-        print(name)
-        moenApp.send_task('bid.jianyu.zl_search', args=(data,))
-        # if i > 2:
-        #     break
+        for bidMethod in bidMethodList:
+            # for orgType in orgTypeList:
+                # for bidProcesse in bidProcesseList:
+                    # for bidIndustry in bidIndustryList:
+
+                        data = {
+                            'page': 1,
+                            'count': 50,
+                            'date': f'{yesterday}_{yesterday}',
+                            'adcodes': adcode,
+                            'bidMethods': bidMethod,
+                            # 'orgTypes': orgType,
+                            # 'bidProcesses': bidProcesse,
+                            # 'bidIndustry': bidIndustry
+
+                        }
+                        print(count, data)
+                        count += 1
+                        moenApp.send_task('bid.jianyu.zl_search', args=(json.dumps(data),))
+                        # if i > 2:
+                        #     break
+
+
 
 def send_jianyu():
     key_list = [

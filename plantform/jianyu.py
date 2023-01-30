@@ -77,17 +77,18 @@ def zl_search(self, data):
     }
 
     data = json.loads(data)
+    params = data
     page = data['page']
-    adcodes = data['adcodes']
-    date = data['date']
-
-
-    params = {
-        'page': page,
-        'count': '50',
-        'date': f'{date}_{date}',
-        'adcodes': adcodes,
-    }
+    # adcodes = data['adcodes']
+    # date = data['date']
+    #
+    #
+    # params = {
+    #     'page': page,
+    #     'count': '50',
+    #     'date': f'{date}_{date}',
+    #     'adcodes': adcodes,
+    # }
 
     proxies = get_proxy_ip('')
 
@@ -103,18 +104,17 @@ def zl_search(self, data):
     for item in records:
         title = item['titleText']
         print(title)
+        count_zl_title(title, params['date'])
         moenApp.send_task('bid.jianyu.search', args=(title,))
     if int(page) == 1:
         max_page = math.ceil(total/50)
 
         for i in range(2, max_page):
-            data = json.dumps({
-                'page': i,
-                'adcodes': adcodes,
-                'date': date
-            })
 
-            moenApp.send_task('bid.jianyu.zl_search', args=(data,))
+            params['page'] = i
+            next_data = json.dumps(params)
+            print(next_data)
+            moenApp.send_task('bid.jianyu.zl_search', args=(next_data,))
 
 
 @moenApp.task(
@@ -226,7 +226,7 @@ def search(self, keyword):
     name='bid.jianyu.detail',
     bind=True,
     acks_late=True,
-    rate_limit='40/m',
+    rate_limit='2/s',
     retry_kwargs={
         "max_retries": 20,
         "default_retry_delay": 1
@@ -478,7 +478,13 @@ def captor(self, tmp_data):
     data = cjy(img_byte)
     cross_car(data, _id, cookies)
 
+def count_zl_title(title, date):
 
+    if '_' in date:
+        date = date.split('_')[0]
+
+    key = "jianyu:zl_title:"+date
+    rds_206_11.sadd(key, title)
 
 def upload_us3(item):
     uuid = item['uuid']
