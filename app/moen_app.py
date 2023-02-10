@@ -31,8 +31,20 @@ moen_queues = [
     ),
 
     Queue(
+        'bid.jianyu.zl_search_keyword',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.zl_search_keyword')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
         'bid.jianyu.search',
         [binding(exchange=moen_exchange, routing_key='bid.jianyu.search')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
+        'bid.jianyu.search_keyword',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.search_keyword')],
         queue_arguments={'x-queue-mode': 'lazy'}
     ),
 
@@ -49,8 +61,19 @@ moen_queues = [
     ),
 
     Queue(
+        'bid.zhiliao.clean',
+        [binding(exchange=moen_exchange, routing_key='bid.zhiliao.clean')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
         'bid.jianyu.zoo',
         [binding(exchange=moen_exchange, routing_key='bid.jianyu.zoo')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+    Queue(
+        'bid.jianyu.kfk',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.kfk')],
         queue_arguments={'x-queue-mode': 'lazy'}
     ),
 
@@ -58,59 +81,7 @@ moen_queues = [
         'bid.jianyu.captor_cookies',
         [binding(exchange=moen_exchange, routing_key='bid.jianyu.captor_cookies')],
         queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-
-    Queue(
-        'moen.tu8tu.list',
-        [binding(exchange=moen_exchange, routing_key='moen.tu8tu.list')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-    Queue(
-        'moen.tu8tu.picture',
-        [binding(exchange=moen_exchange, routing_key='moen.tu8tu.picture')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-    Queue(
-        'moen.tu8tu.article',
-        [binding(exchange=moen_exchange, routing_key='moen.tu8tu.article')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-    Queue(
-        'moen.tu8tu.diary',
-        [binding(exchange=moen_exchange, routing_key='moen.tu8tu.diary')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-    Queue(
-        'moen.tu8tu.question',
-        [binding(exchange=moen_exchange, routing_key='moen.tu8tu.question')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-
-    Queue(
-        'moen.haozu.list',
-        [binding(exchange=moen_exchange, routing_key='moen.haozu.list')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-    Queue(
-        'moen.haozu.house',
-        [binding(exchange=moen_exchange, routing_key='moen.haozu.house')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-    Queue(
-        'moen.haozu.article',
-        [binding(exchange=moen_exchange, routing_key='moen.haozu.article')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-    Queue(
-        'moen.csdn.article',
-        [binding(exchange=moen_exchange, routing_key='moen.csdn.article')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-    Queue(
-        'moen.sogou.article',
-        [binding(exchange=moen_exchange, routing_key='moen.sogou.article')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
+    )
 
 ]
 

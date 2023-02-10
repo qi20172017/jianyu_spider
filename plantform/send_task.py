@@ -1,6 +1,8 @@
 import json
 import datetime
+import requests
 from app.moen_app import moenApp
+from model.rds import rds_206_11
 
 
 def send_tu8tu():
@@ -1477,9 +1479,9 @@ def send_zl_search():
             "city": "上海"
         }]
 
-    bidMethodList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    # orgTypeList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    # bidProcesseList = [20, 40, 50, 100, 60, 70, 80, 90, 3]
+    # bidMethodList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    orgTypeList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    bidProcesseList = [20, 40, 50, 100, 60, 70, 80, 90, 3]
     # bidIndustryList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
 
 
@@ -1490,40 +1492,121 @@ def send_zl_search():
         name = item['city']
         adcode = item['adcode']
 
-        for bidMethod in bidMethodList:
-            # for orgType in orgTypeList:
-                # for bidProcesse in bidProcesseList:
-                    # for bidIndustry in bidIndustryList:
+        # for bidMethod in bidMethodList:
+        for orgType in orgTypeList:
+            for bidProcesse in bidProcesseList:
+                # for bidIndustry in bidIndustryList:
 
-                        data = {
-                            'page': 1,
-                            'count': 50,
-                            'date': f'{yesterday}_{yesterday}',
-                            'adcodes': adcode,
-                            'bidMethods': bidMethod,
-                            # 'orgTypes': orgType,
-                            # 'bidProcesses': bidProcesse,
-                            # 'bidIndustry': bidIndustry
+                    data = {
+                        'page': 1,
+                        'count': 50,
+                        'date': f'{yesterday}_{yesterday}',
+                        'adcodes': adcode,
+                        # 'bidMethods': bidMethod,
+                        'orgTypes': orgType,
+                        'bidProcesses': bidProcesse,
+                        # 'bidIndustry': bidIndustry
 
-                        }
-                        print(count, data)
-                        count += 1
-                        moenApp.send_task('bid.jianyu.zl_search', args=(json.dumps(data),))
-                        # if i > 2:
-                        #     break
+                    }
+                    print(count, data)
+                    count += 1
+                    moenApp.send_task('bid.jianyu.zl_search', args=(json.dumps(data),))
+                    # if i > 2:
+                    #     break
+    count = get_zl_data(yesterday)
+    rds_206_11.hset('jianyu:zl_title:count', yesterday, count)
+
+def send_zl_search_keyword():
+
+
+    key_list = rds_206_11.smembers('jianyu:9w_keyword') # 这个keyword_1里面是过滤了一遍的
+    for key in key_list:
+        key = key.decode()
+        print(key)
+        params = {
+            'page': 1,
+            'count': 50,
+            'keyword': key,
+        }
+
+        moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
+
+    # params = {
+    #     'page': 1,
+    #     'count': 50,
+    #     'keyword': '计算机',
+    # }
+    #
+    # moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
+
+
+def get_zl_data(date):
+
+    headers = {
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Content-Type': 'application/json',
+        'Origin': 'https://www.zhiliaobiaoxun.com',
+        'Pragma': 'no-cache',
+        'Referer': 'https://www.zhiliaobiaoxun.com/search/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'cross-site',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+        'sec-ch-ua': '"Not?A_Brand";v="8", "Chromium";v="108", "Google Chrome";v="108"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+    }
+
+    date = date + '_' + date
+    params = {
+        'page': '1',
+        'count': '10',
+        'date': date,
+    }
+
+    response = requests.get('https://api-service-zhiliao.bailian-ai.com/search/bid', params=params, headers=headers)
+
+    try:
+        j_data = json.loads(response.text)
+        total = j_data['data']['total']
+        # print(total)
+        return total
+    except Exception as e:
+        print(e)
+        return 0
 
 
 
 def send_jianyu():
     key_list = [
         '大数据',
-        '计算机',
-        '云计算',
-        '人工智能',
-        '图像识别',
+        "宁波市鄞州区人民政府潘火街道办事处轨道交通工程建设管理办公室等银行账户"
+        # '计算机',
+        # '云计算',
+        # '人工智能',
+        # '图像识别',
     ]
-    for key in key_list:
-        moenApp.send_task('bid.jianyu.search', args=(key,))
+    for keyword in key_list:
+
+        moenApp.send_task('bid.jianyu.search', args=(json.dumps({
+            'keyword': keyword,
+            'page': 1
+        }),))
+
+def send_jianyu_keyword():
+
+    key_list = rds_206_11.smembers('jianyu:9w_keyword_1') # 这个keyword_1里面是过滤了一遍的
+
+    for keyword in key_list:
+        keyword = keyword.decode()
+        print(keyword)
+        moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
+            'keyword': keyword,
+            'page': 1
+        }),))
 
 
 def send_jy_captor_cookies():
@@ -1869,8 +1952,15 @@ def send_jy_zoo():
 
 if __name__ == '__main__':
     # send_jianyu()
+    # send_jianyu_keyword()
 
     send_zl_search()
+    send_zl_search_keyword()
+
+    # yesterday = '2023-01-31'
+    # count = get_zl_data(yesterday)
+    # rds_206_11.hset('jianyu:zl_title:count', yesterday, count)
+
 
     # send_jy_captor_cookies()
     # send_jy_zoo()
@@ -1879,3 +1969,6 @@ if __name__ == '__main__':
     # send_haozu()
     # send_csdn()
     # send_sogou()
+
+    # coding:UTF-8
+
