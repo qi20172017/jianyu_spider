@@ -28,6 +28,7 @@ import cv2
 import hashlib
 from io import BytesIO
 from ufile import config,filemanager
+from sonyflake import SonyFlake
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -42,9 +43,8 @@ from kafka.errors import KafkaError
 test = False
 
 
-KAFAKA_HOST = ["172.18.1.152", "172.18.1.149", "172.18.1.235"]
-KAFAKA_PORT = 9092
-KAFAKA_TOPIC = "bid"
+
+bootstrap_servers=['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092']
 
 
 class Kafka_producer():
@@ -52,30 +52,62 @@ class Kafka_producer():
     生产模块：根据不同的key，区分消息
     '''
 
-    def __init__(self, kafkahost,kafkaport, kafkatopic, key):
-        self.kafkaHost = kafkahost
-        self.kafkaPort = kafkaport
-        self.kafkatopic = kafkatopic
-        self.key = str(key)
-        print("producer:h,p,t,k",kafkahost,kafkaport,kafkatopic,key)
-        bootstrap_servers = [f'{host}:{self.kafkaPort}' for host in self.kafkaHost]
-        print("boot svr:",bootstrap_servers)
-        self.producer = KafkaProducer(bootstrap_servers = bootstrap_servers
+    def __init__(self):
+
+        self.kafkatopic = "spider_bid"
+        self.producer = KafkaProducer(bootstrap_servers=bootstrap_servers
                 )
 
     def sendjsondata(self, params):
         try:
             parmas_message = json.dumps(params,ensure_ascii=False)
-            producer = self.producer
-            print(parmas_message)
+            # print(parmas_message)
             v = parmas_message.encode('utf-8')
-            k = self.key.encode('utf-8')
-            print("send msg:(k,v)",k,v)
-            producer.send(self.kafkatopic, v,key=k,partition=int(self.key)).add_callback(self.on_send_success).add_errback(self.on_send_error)
-            producer.flush()
+            # print("send msg:(k,v)",k,v)
+            self.producer.send(self.kafkatopic, v,
+                          # key=k,
+                          # partition=int(self.key)
+                          ).add_callback(self.on_send_success).add_errback(self.on_send_error)
+            self.producer.flush()
         except KafkaError as e:
             print (e)
         # 打印成功发送的信息
+        self.producer.close()
+
+    def on_send_success(self, record_metadata):
+        print("topic:{} partition:{} offset:{}".format(record_metadata.topic, record_metadata.partition,
+                                                       record_metadata.offset))
+        # 打印失败的信息
+
+    def on_send_error(self, excp):
+        print(excp)
+
+class My_Kafka_producer():
+    '''''
+    生产模块：根据不同的key，区分消息
+    '''
+
+    def __init__(self):
+
+        self.kafkatopic = "bid_test_v1"
+        self.producer = KafkaProducer(bootstrap_servers=bootstrap_servers
+                )
+
+    def sendjsondata(self, params):
+        try:
+            parmas_message = json.dumps(params,ensure_ascii=False)
+            # print(parmas_message)
+            v = parmas_message.encode('utf-8')
+            # print("send msg:(k,v)",k,v)
+            self.producer.send(self.kafkatopic, v,
+                          # key=k,
+                          # partition=int(self.key)
+                          ).add_callback(self.on_send_success).add_errback(self.on_send_error)
+            self.producer.flush()
+        except KafkaError as e:
+            print (e)
+        # 打印成功发送的信息
+        self.producer.close()
 
     def on_send_success(self, record_metadata):
         print("topic:{} partition:{} offset:{}".format(record_metadata.topic, record_metadata.partition,
@@ -292,23 +324,27 @@ def search(self, data):
 
     data = {
         'pageNumber': page,
-        'pageSize': '50',
+        'pageSize': '100',
         'reqType': 'bidSearch',
         'searchvalue': keyword,
         'area': '',
         'subtype': '',
         'publishtime': 'lately-7',
-        'selectType': 'content,title',
+        'selectType': 'content,file,title',
         'minprice': '',
         'maxprice': '',
         'industry': '',
-        'tabularflag': '',
+        'tabularflag': 'Y',
         'buyerclass': '',
         'buyertel': '',
         'winnertel': '',
         'notkey': '',
         'fileExists': '0',
         'city': '',
+        'searchGroup': '0',
+        'searchMode': '1',
+        'wordsMode': '0',
+        'additionalWords': '',
     }
     url = 'https://www.jianyu360.cn/front/pcAjaxReq'
     proxies = get_proxy_ip('')
@@ -368,24 +404,28 @@ def search(self, data):
             'subtype': subtype,
             'site': site
         }
-        print(data)
+        # print(data)
 
         if publishtime < int(time.time()) - (2 * 24 * 60 * 60):
             next_page = False
 
         if rds_206_11.sadd('jianyu:crawled_id', _id):
-
+            print(f'{_id} 有效数据')
             moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
             rds_206_11.hincrby('jianyu:source_classify', f'zl_{today_date}')
         else:
-            print(f'{_id} 已经爬过了')
-
-    if next_page and len(data_list) == 50:
+            # print(f'{_id} 已经爬过了')
+            pass
+    if next_page and len(data_list) == 100:
         # next(key, int(page)+1)
         moenApp.send_task('bid.jianyu.search', args=(json.dumps({
             'keyword': keyword,
             'page': int(page)+1
         }),))
+        print('翻页',{
+            'keyword': keyword,
+            'page': int(page)+1
+        })
 
 
 @moenApp.task(
@@ -424,23 +464,27 @@ def search_keyword(self, data):
 
     data = {
         'pageNumber': page,
-        'pageSize': '50',
+        'pageSize': '100',
         'reqType': 'bidSearch',
         'searchvalue': keyword,
         'area': '',
         'subtype': '',
         'publishtime': 'lately-7',
-        'selectType': 'content,title',
+        'selectType': 'content,file,title',
         'minprice': '',
         'maxprice': '',
         'industry': '',
-        'tabularflag': '',
+        'tabularflag': 'Y',
         'buyerclass': '',
         'buyertel': '',
         'winnertel': '',
         'notkey': '',
         'fileExists': '0',
         'city': '',
+        'searchGroup': '0',
+        'searchMode': '1',
+        'wordsMode': '0',
+        'additionalWords': '',
     }
     url = 'https://www.jianyu360.cn/front/pcAjaxReq'
     proxies = get_proxy_ip('')
@@ -506,14 +550,14 @@ def search_keyword(self, data):
 
         # 用于过滤已经爬过的
         if rds_206_11.sadd('jianyu:crawled_id', _id):
-
+            print(f'{_id} 有效数据')
             moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
             rds_206_11.hincrby('jianyu:source_classify', f'kw_{today_date}')
 
         else:
-            print(f'{_id} 已经爬过了')
-
-    if next_page and len(data_list) == 50:
+            # print(f'{_id} 已经爬过了')
+            pass
+    if next_page and len(data_list) == 100:
         # next(key, int(page)+1)
         moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
             'keyword': keyword,
@@ -541,8 +585,6 @@ def detail(self, tmp_data):
     _id = bid_data['_id']
     print(_id)
 
-
-
     phone, cookies = get_cookies()
     if not phone:
         print('没有cookies了')
@@ -566,13 +608,17 @@ def detail(self, tmp_data):
     }
 
     url = f'https://www.jianyu360.cn/article/content/{_id}.html'
+
+    params = {
+        'aside': '0',
+    }
     response = requests.get(
         url,
+        params=params,
         cookies=cookies,
         headers=headers,
         proxies=get_proxy_ip(1)
     )
-
     rds_206_11.hincrby('jianyu:cookies_count', phone)
 
 
@@ -601,7 +647,7 @@ def detail(self, tmp_data):
     if res:
         detail = res[0]
         detail = etree.tostring(detail, method='html', encoding='utf-8').decode()
-        print(detail)
+        # print(detail)
         bid_detail = detail
     else:
         bid_detail = ''
@@ -610,7 +656,7 @@ def detail(self, tmp_data):
     if res:
         data = json.loads(res[0])
         url = data['obj'].get('href')
-        print(url)
+        # print(url)
         orign_link = url
     else:
         orign_link = ''
@@ -710,7 +756,20 @@ def data_clean(self, tmp_data):
     print(item)
     moenApp.send_task('bid.jianyu.zoo', args=(str_data,))
     item['tender_time'] = 31507200000
-    str_data = json.dumps(item)
+
+    sf = SonyFlake()
+    next_id = sf.next_id()
+
+    final_data = {
+        "version": 1,
+        "trace_sn": str(next_id),
+        "timestamp": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]+time.strftime('%z', time.localtime()),
+        "data_type": "spider_bid",
+        "data": item
+    }
+
+
+    str_data = json.dumps(final_data)
     moenApp.send_task('bid.jianyu.kfk', args=(str_data,))
 
     #
@@ -826,7 +885,7 @@ def keep_date(self, tmp_data):
         "default_retry_delay": 1
     }
 )
-def keep_date(self, tmp_data):
+def keep_kfk(self, tmp_data):
     bid_data = json.loads(tmp_data)
     # print(type(bid_data), bid_data)
     # kfk.send_message(bid_data)
@@ -837,12 +896,14 @@ def keep_date(self, tmp_data):
     # result = future.get(timeout=30)
     # print(result)
     print('bid_data: ', bid_data)
-    i = random.randint(0,7)
-    producer = Kafka_producer(KAFAKA_HOST, KAFAKA_PORT, KAFAKA_TOPIC, i)
-    print("===========> producer:", producer)
+    # producer = Kafka_producer()
+    # print("===========> producer:", producer)
+    producer = Kafka_producer()
 
     producer.sendjsondata(bid_data)
-    time.sleep(1)
+
+    my_pro = My_Kafka_producer()
+    my_pro.sendjsondata(bid_data)
 
 
 """
@@ -1472,11 +1533,12 @@ if __name__ == '__main__':
     # keep_date('')
 
     data0 = json.dumps({
-        'keyword': '大数据',
+        # 'keyword': '大数据',
+        'keyword': '揭阳市榕城区卢前小学计算机设备维修和保养服务服务采购',
         'page': 1
     })
-
-    # search_keyword(data0)
+    # search(data0)
+    search_keyword(data0)
 
     # print(in_limit('2023-01-31'))
 
@@ -1505,6 +1567,7 @@ if __name__ == '__main__':
     data2 = {'_id': 'ABCY1xGYz0vIys4JGt1cE8sDzMoFjRmYXxzKz8CPT0eVmlzdCdUCdg%3D', 'area': '北京', 'city': '北京市',
          'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示', 'subtype': '单一',
          'site': '中国中化集团有限公司商务电子招投标平台'}
+
     # detail(json.dumps(data2))
 
     data3 = {'_id': 'ABCY1xGYz0vIys4JGt1cE8sDzMoFjRmYXxzKz8CPT0eVmlzdCdUCdg%3D', 'area': '北京', 'city': '北京市', 'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示', 'subtype': '单一', 'site': '中国中化集团有限公司商务电子招投标平台', 'orign_link': 'http://e.sinochemitc.com/cms/channel/ywgg1hw/124978.htm', 'bid_detail': '<div id="tab1">\n\t\t\t\t\t<div class="com-detail">\n\t\t\t\t\t\t1. 项目名称：北京银行数字化转型9号工程-“京客图谱”项目<br>2. 采购人名称：北京银行股份有限公司<br>3. 采购人地址：北京市东城区和平里东街1号<br>4. 本项目资金来源：企业自筹资金<br>5. 本次采购内容为：本项目是需要供应商通过大数据平台对商机数据进行加工处理。<br>6. 拟采购方式：单一来源<br>7. 拟采购供应商名称：北京东方国信科技股份有限公司<br>8. 拟采购供应商地址：北京市朝阳区创达三路1号院1号楼7层101<br>9. 论证专家成员：<br><table border="1"><tbody><tr><td>序号<br></td><td>姓名<br></td><td>职称<br></td></tr><tr><td>1<br></td><td>张爱恭<br></td><td>高级工程师<br></td></tr><tr><td>2<br></td><td>赵刚<br></td><td>高级工程师<br></td></tr><tr><td>3<br></td><td>杨宁<br></td><td>高级工程师<br></td></tr></tbody></table><br>10. 论证专家意见：<br>中化商务有限公司于2023年1月17日在北京复兴门外大街A2号西城金茂中心组织了相关专家对该项目需求文件及建议采购方式进行了论证。<br>经论证，专家组成员一致认为该项目需求文件完整，单一来源理由充分。<br>11. 公示期：2023年1月17日至2023年1月29日，共计5个工作日。潜在供应商对公示内容有异议的，请于公示期内将书面意见反馈至中化商务有限公司，书面文件包括：<br>? 有效的营业执照或事业单位法人证明复印件；<br>? 法定代表人授权书（如由授权代理人提出异议的）；<br>? 异议单位情况介绍（包括但不限于供应商名称、联系人、联系电话、联系邮箱等）；异议说明、能够完成本项目的声明及证明材料。<br>以上内容均需加盖公章。<br>代理机构：中化商务有限公司<br>地    址：北京复兴门外大街A2号西城金茂中心（邮编：100045）<br>业务联系人：唐昱<br>电    话：18310298572<br>传    真：010-59369323<br>电子邮箱：tangyu10@sinochem.com\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t'}
@@ -1527,7 +1590,7 @@ if __name__ == '__main__':
     }
     # zl_search_keyword(json.dumps(data5))
 
-    rds_206_11.hincrby('jianyu:source_classify', 'zl_2023-02-10')
+    # rds_206_11.hincrby('jianyu:source_classify', 'zl_2023-02-10')
 
     # keep_date(json.dumps(data4))
     # page_data = get_data('weixin_43471909', 1)
