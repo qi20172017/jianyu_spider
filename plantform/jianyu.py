@@ -165,12 +165,18 @@ def zl_search(self, data):
 
     proxies = get_proxy_ip('')
 
-    response = requests.get(
-        'https://api-service-zhiliao.bailian-ai.com/search/bid',
-        params=params,
-        headers=headers,
-        proxies=proxies
-    )
+    try:
+        response = requests.get(
+            'https://api-service-zhiliao.bailian-ai.com/search/bid',
+            params=params,
+            headers=headers,
+            proxies=proxies
+        )
+    except Exception as e:
+        print("ERROR", e)
+        # moenApp.send_task('bid.jianyu.zl_search', )
+        moenApp.send_task('bid.jianyu.zl_search', args=(json.dumps(data),))
+        return
     data = response.json()['data']
     records = data['records']
     total = data['total']
@@ -178,20 +184,25 @@ def zl_search(self, data):
     today_date = datetime.datetime.today().strftime('%Y-%m-%d')
 
     for item in records:
-        title = item['titleText']
-        print(title)
-        count_zl_title(title, params['date'])
+        # title = item['titleText']
+        products = item['products']
+        for title in products:
+            title = title.replace("<font color='red'>", '').replace('</font>', '')
 
-        if rds_206_11.sadd(f'jianyu:zl_title_all:{today_date}', title):
-            moenApp.send_task('bid.jianyu.search', args=(json.dumps({
-                'keyword': title,
-                'page': 1
-            }),))
+            print(title)
+            count_zl_title(title, params['date'])
+
+            if rds_206_11.sadd(f'jianyu:zl_title_all:{today_date}', title):
+                moenApp.send_task('bid.jianyu.search', args=(json.dumps({
+                    'keyword': title,
+                    'page': 1,
+                    'area':''
+                }),))
 
     if int(page) == 1:
         max_page = math.ceil(total/50)
 
-        for i in range(2, max_page):
+        for i in range(2, min(max_page, 6)):
 
             params['page'] = i
             next_data = json.dumps(params)
@@ -244,13 +255,17 @@ def zl_search_keyword(self, data):
     # }
 
     proxies = get_proxy_ip('')
-
-    response = requests.get(
-        'https://api-service-zhiliao.bailian-ai.com/search/bid',
-        params=params,
-        headers=headers,
-        proxies=proxies
-    )
+    try:
+        response = requests.get(
+            'https://api-service-zhiliao.bailian-ai.com/search/bid',
+            params=params,
+            headers=headers,
+            proxies=proxies
+        )
+    except Exception as e:
+        print("ERROR: ", e)
+        moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(data),))
+        return
     data = response.json()['data']
     records = data['records']
     total = data['total']
@@ -265,21 +280,29 @@ def zl_search_keyword(self, data):
 
         next_page = in_limit(pubTime)
 
-        title = item['titleText']
-        print(title, pubTime)
         if not next_page:         # 超出时间范围也不要进行下一步了。要不然，2万个词，每个词多个20个，就是40万个，就特别多
             break
-        count_zl_title(title, pubTime)
 
-        if rds_206_11.sadd(f'jianyu:zl_title_all:{today_date}', title):
+        products = item['products']
 
-            moenApp.send_task('bid.jianyu.search', args=(json.dumps({
-                'keyword': title,
-                'page': 1
-            }),))
+        # title = item['titleText']
+        for title in products:
+            title = title.replace("<font color='red'>", '').replace('</font>', '')
+
+            print(title, pubTime)
+
+            count_zl_title(title, pubTime)
+
+            if rds_206_11.sadd(f'jianyu:zl_title_all:{today_date}', title):
+
+                moenApp.send_task('bid.jianyu.search', args=(json.dumps({
+                    'keyword': title,
+                    'page': 1,
+                    'area':''
+                }),))
 
 
-    if next_page:
+    if next_page and int(page) <5:
 
         params['page'] = int(page) + 1
         next_data = json.dumps(params)
@@ -303,6 +326,7 @@ def search(self, data):
     data = json.loads(data)
     page = data['page']
     keyword = data['keyword']
+    area = data['area']
     headers = {
         'authority': 'www.jianyu360.cn',
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
@@ -327,7 +351,7 @@ def search(self, data):
         'pageSize': '100',
         'reqType': 'bidSearch',
         'searchvalue': keyword,
-        'area': '',
+        'area': area,
         'subtype': '',
         'publishtime': 'lately-7',
         'selectType': 'content,file,title',
@@ -348,15 +372,20 @@ def search(self, data):
     }
     url = 'https://www.jianyu360.cn/front/pcAjaxReq'
     proxies = get_proxy_ip('')
-    response = requests.post(
-        url,
-        data=data,
-        verify=False,
-        headers=headers,
-        proxies=proxies
-    )
-    if response.status_code == 702:
-        raise ValueError
+    try:
+        response = requests.post(
+            url,
+            data=data,
+            verify=False,
+            headers=headers,
+            proxies=proxies
+        )
+        if response.status_code == 702:
+            raise ValueError
+    except Exception as e:
+        print('ERROR: ', e)
+        moenApp.send_task('bid.jianyu.search', args=(json.dumps(data),))
+        return
     # res = re.findall('params: (.*),', response.text)
     # if res:
     #     data = json.loads(res[0])
@@ -368,9 +397,10 @@ def search(self, data):
     if "<title>验证码</title>" in response.text:
         moenApp.send_task('bid.jianyu.search', args=(json.dumps({
             'keyword': keyword,
-            'page': page
+            'page': page,
+            'area':area
         }),))
-        print(f'出现了验证码:{keyword},{page}')
+        print(f'出现了验证码:{keyword},{page},{area}')
         return
 
     data_list = json.loads(response.text)['list']
@@ -388,7 +418,7 @@ def search(self, data):
     for bid in data_list:
 
         _id = bid['_id']
-        area = bid.get('area')
+        bid_area = bid.get('area')
         city = bid.get('city')
         publishtime = bid['publishtime']
         title = bid.get('title')
@@ -397,7 +427,7 @@ def search(self, data):
 
         data = {
             '_id': _id,
-            'area': area,
+            'area': bid_area,
             'city': city,
             'publishtime': publishtime,
             'title': title,
@@ -409,22 +439,31 @@ def search(self, data):
         if publishtime < int(time.time()) - (2 * 24 * 60 * 60):
             next_page = False
 
-        if rds_206_11.sadd('jianyu:crawled_id', _id):
+        not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
+        if not_inquee:
+            pass
+        else:
+            print(f'已经在队列: {_id}')
+            continue
+
+        if not rds_206_11.sismember('jianyu:crawled_id', _id):
             print(f'{_id} 有效数据')
             moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
-            rds_206_11.hincrby('jianyu:source_classify', f'zl_{today_date}')
+            # rds_206_11.hincrby('jianyu:source_classify', f'zl_{today_date}')
         else:
-            # print(f'{_id} 已经爬过了')
+            print(f'{_id} 已经爬过了')
             pass
     if next_page and len(data_list) == 100:
         # next(key, int(page)+1)
         moenApp.send_task('bid.jianyu.search', args=(json.dumps({
             'keyword': keyword,
-            'page': int(page)+1
+            'page': int(page)+1,
+            'area': area
         }),))
         print('翻页',{
             'keyword': keyword,
-            'page': int(page)+1
+            'page': int(page)+1,
+            'area': area
         })
 
 
@@ -443,6 +482,167 @@ def search_keyword(self, data):
     data = json.loads(data)
     page = data['page']
     keyword = data['keyword']
+    area = data['area']
+    headers = {
+        'authority': 'www.jianyu360.cn',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'accept-language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+        'cache-control': 'no-cache',
+        'origin': 'https://www.jianyu360.cn',
+        'pragma': 'no-cache',
+        'referer': 'https://www.jianyu360.cn/jylab/supsearch/index.html?keywords=%E5%A4%A7%E6%95%B0%E6%8D%AE&searchvalue=&selectType=title',
+        'sec-ch-ua': '"Not?A_Brand";v="8", "Chromium";v="108", "Google Chrome";v="108"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-user': '?1',
+        'upgrade-insecure-requests': '1',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+    }
+
+    req_data = {
+        'pageNumber': page,
+        'pageSize': '100',
+        'reqType': 'bidSearch',
+        'searchvalue': keyword,
+        'area': area,
+        'subtype': '',
+        'publishtime': 'lately-7',
+        'selectType': 'content,file,title',
+        'minprice': '',
+        'maxprice': '',
+        'industry': '',
+        'tabularflag': 'Y',
+        'buyerclass': '',
+        'buyertel': '',
+        'winnertel': '',
+        'notkey': '',
+        'fileExists': '0',
+        'city': '',
+        'searchGroup': '0',
+        'searchMode': '1',
+        'wordsMode': '0',
+        'additionalWords': '',
+    }
+    url = 'https://www.jianyu360.cn/front/pcAjaxReq'
+    proxies = get_proxy_ip('')
+    try:
+        response = requests.post(
+            url,
+            data=req_data,
+            verify=False,
+            headers=headers,
+            proxies=proxies
+        )
+        if response.status_code == 702:
+            raise ValueError
+    except Exception as e:
+        print('ERROR: ', e)
+        moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps(data),))
+        return
+    # res = re.findall('params: (.*),', response.text)
+    # if res:
+    #     data = json.loads(res[0])
+    #     data_list = data['list']
+    #     total = data['totalPage']
+    # else:
+    #     data_list = json.loads(response.text)['list']
+    # print(response.text)
+    if "<title>验证码</title>" in response.text:
+        moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
+            'keyword': keyword,
+            'page': page,
+            'area':area
+        }),))
+        print(f'出现了验证码:{keyword},{page},{area}')
+        return
+
+    json_data = json.loads(response.text)
+    data_list = json_data['list']
+    count = json_data['count']
+    count_keyword(f'{keyword}_{area}', count)
+    if not data_list:
+        return
+
+    print('数据的条数：', len(data_list))
+    today_date = datetime.datetime.today().strftime('%Y-%m-%d')
+
+    next_page = True
+    for bid in data_list:
+
+        _id = bid['_id']
+        bid_area = bid.get('area')
+        city = bid.get('city')
+        publishtime = bid['publishtime']
+        title = bid.get('title')
+        subtype = bid.get('subtype')
+        site = bid.get('site')
+
+        data = {
+            '_id': _id,
+            'area': bid_area,
+            'city': city,
+            'publishtime': publishtime,
+            'title': title,
+            'subtype': subtype,
+            'site': site
+        }
+        # print(data)
+
+        if publishtime < int(time.time()) - (2 * 24 * 60 * 60):
+            next_page = False
+
+        # 用于过滤已经爬过的
+        #
+        not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
+        if not_inquee:
+            pass
+        else:
+            print(f'已经在队列: {_id}')
+            continue
+
+        if not rds_206_11.sismember('jianyu:crawled_id', _id):
+            print(f'{_id} 有效数据')
+            moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
+            rds_206_11.hincrby('jianyu:source_classify', f'kw_{today_date}')
+
+        else:
+            print(f'{_id} 已经爬过了')
+            pass
+    if next_page and len(data_list) == 100:
+        # next(key, int(page)+1)
+        moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
+            'keyword': keyword,
+            'page': int(page)+1,
+            'area':area
+        }),))
+        print('翻页',{
+            'keyword': keyword,
+            'page': int(page)+1,
+            'area':area
+        })
+
+@moenApp.task(
+    name='bid.jianyu.require',
+    bind=True,
+    acks_late=True,
+    rate_limit='5/s',
+    retry_kwargs={
+        "max_retries": 20,
+        "default_retry_delay": 1
+    }
+)
+def search_require(self, data):
+
+    data = json.loads(data)
+    page = data['page']
+    keyword = data['keyword']
+    area = data['area']
+
+    print(f'receive data: {data}')
+
     headers = {
         'authority': 'www.jianyu360.cn',
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
@@ -467,10 +667,10 @@ def search_keyword(self, data):
         'pageSize': '100',
         'reqType': 'bidSearch',
         'searchvalue': keyword,
-        'area': '',
+        'area': area,
         'subtype': '',
-        'publishtime': 'lately-7',
-        'selectType': 'content,file,title',
+        'publishtime': 'thisyear',
+        'selectType': 'title',
         'minprice': '',
         'maxprice': '',
         'industry': '',
@@ -482,52 +682,57 @@ def search_keyword(self, data):
         'fileExists': '0',
         'city': '',
         'searchGroup': '0',
-        'searchMode': '1',
+        'searchMode': '0',
         'wordsMode': '0',
         'additionalWords': '',
     }
     url = 'https://www.jianyu360.cn/front/pcAjaxReq'
     proxies = get_proxy_ip('')
-    response = requests.post(
-        url,
-        data=data,
-        verify=False,
-        headers=headers,
-        proxies=proxies
-    )
+    try:
+        response = requests.post(
+            url,
+            data=data,
+            verify=False,
+            headers=headers,
+            proxies=proxies
+        )
+    except Exception as e:
+        print(f'ERROR: {e}')
+        moenApp.send_task('bid.jianyu.require', args=(json.dumps({
+            'keyword': keyword,
+            'page': page,
+            'area':area
+        }),))
+        print(f'请求有问题:{keyword},{page},{area}')
+        return
+
     if response.status_code == 702:
         raise ValueError
-    # res = re.findall('params: (.*),', response.text)
-    # if res:
-    #     data = json.loads(res[0])
-    #     data_list = data['list']
-    #     total = data['totalPage']
-    # else:
-    #     data_list = json.loads(response.text)['list']
 
     if "<title>验证码</title>" in response.text:
-        moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
+        moenApp.send_task('bid.jianyu.require', args=(json.dumps({
             'keyword': keyword,
-            'page': page
+            'page': page,
+            'area':area
         }),))
-        print(f'出现了验证码:{keyword},{page}')
+        print(f'出现了验证码:{keyword},{page},{area}')
         return
 
     json_data = json.loads(response.text)
     data_list = json_data['list']
     count = json_data['count']
-    count_keyword(keyword, count)
+    count_keyword(f'{keyword}_{area}', count)
     if not data_list:
+        print(f'page raw data: {response.text}')
         return
 
     print('数据的条数：', len(data_list))
-    today_date = datetime.datetime.today().strftime('%Y-%m-%d')
 
     next_page = True
     for bid in data_list:
 
         _id = bid['_id']
-        area = bid.get('area')
+        bid_area = bid.get('area')
         city = bid.get('city')
         publishtime = bid['publishtime']
         title = bid.get('title')
@@ -536,41 +741,28 @@ def search_keyword(self, data):
 
         data = {
             '_id': _id,
-            'area': area,
+            'area': bid_area,
             'city': city,
             'publishtime': publishtime,
             'title': title,
             'subtype': subtype,
             'site': site
         }
-        # print(data)
 
-        if publishtime < int(time.time()) - (2 * 24 * 60 * 60):
-            next_page = False
+        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),))
+        print(f'send to require detail 1 次: {data}')
+        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),))
+        print(f'send to require detail 2 次: {data}')
 
-        # 用于过滤已经爬过的
-        if rds_206_11.sadd('jianyu:crawled_id', _id):
-            print(f'{_id} 有效数据')
-            moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
-            rds_206_11.hincrby('jianyu:source_classify', f'kw_{today_date}')
-
-        else:
-            # print(f'{_id} 已经爬过了')
-            pass
-    if next_page and len(data_list) == 100:
-        # next(key, int(page)+1)
-        moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
+    if next_page and len(data_list) == 100 and int(page) < 11:
+        moenApp.send_task('bid.jianyu.require', args=(json.dumps({
             'keyword': keyword,
-            'page': int(page)+1
+            'page': int(page)+1,
+            'area':area
         }),))
-        print('翻页',{
-            'keyword': keyword,
-            'page': int(page)+1
-        })
-
 
 @moenApp.task(
-    name='bid.jianyu.detail',
+    name='bid.jianyu.require.detail',
     bind=True,
     acks_late=True,
     rate_limit='3/s',
@@ -579,15 +771,20 @@ def search_keyword(self, data):
         "default_retry_delay": 1
     }
 )
-def detail(self, tmp_data):
+def require_detail(self, tmp_data):
 
     bid_data = json.loads(tmp_data)
     _id = bid_data['_id']
-    print(_id)
+    print(f'receive data: {bid_data}')
+
 
     phone, cookies = get_cookies()
     if not phone:
         print('没有cookies了')
+        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(bid_data),))
+
+        time.sleep(60)
+
         return
 
     headers = {
@@ -608,19 +805,140 @@ def detail(self, tmp_data):
     }
 
     url = f'https://www.jianyu360.cn/article/content/{_id}.html'
-
     params = {
         'aside': '0',
     }
-    response = requests.get(
-        url,
-        params=params,
-        cookies=cookies,
-        headers=headers,
-        proxies=get_proxy_ip(1)
-    )
-    rds_206_11.hincrby('jianyu:cookies_count', phone)
+    try:
+        response = requests.get(
+            url,
+            params=params,
+            cookies=cookies,
+            headers=headers,
+            proxies=get_proxy_ip(1),
+            stream=True
+        )
+        rds_206_11.hincrby('jianyu:cookies_count', phone)
+    except Exception as e:
+        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(bid_data),))
+        print('ERROR: ', e)
+        return
 
+    res = re.findall('<div id="tab1">(.*)<div id="attach-list"', response.text, re.S)
+    if len(res) > 0:
+        res = res[0]
+        final_res = '<div id="tab1">' + res
+
+    else:
+        final_res = response.text
+
+
+    if '<title>验证码</title>' in final_res:
+
+        captor_data = {
+            '_id': _id,
+            'cookies': cookies,
+            'final_res': final_res
+        }
+        moenApp.send_task('bid.jianyu.captor_cookies', args=(json.dumps(captor_data),))
+        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(bid_data),))
+        return
+
+    data = etree.HTML(response.text)
+
+    res = data.xpath('//*[@id="tab1"]')
+    if res:
+        detail = res[0]
+        detail = etree.tostring(detail, method='html', encoding='utf-8').decode()
+        # print(detail)
+        bid_detail = detail
+    else:
+        bid_detail = ''
+        print(f'ERROR: no bid detail: {bid_data}')
+        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(bid_data),))
+
+
+    res = re.findall('params: (.*),', response.text)
+    if res:
+        data = json.loads(res[0])
+        url = data['obj'].get('href')
+        # print(url)
+        orign_link = url
+    else:
+        orign_link = ''
+    bid_data['orign_link'] = orign_link
+    bid_data['bid_detail'] = bid_detail
+
+
+    moenApp.send_task('bid.jianyu.clean', args=(json.dumps(bid_data),))
+    print(f'send to clean: {bid_data}')
+    rds_206_11.hset('jianyu:require_data', bid_data['title'], json.dumps(bid_data))
+    print('ok')
+
+
+@moenApp.task(
+    name='bid.jianyu.detail',
+    bind=True,
+    acks_late=True,
+    rate_limit='3/s',
+    retry_kwargs={
+        "max_retries": 20,
+        "default_retry_delay": 1
+    }
+)
+def detail(self, tmp_data):
+
+    bid_data = json.loads(tmp_data)
+    _id = bid_data['_id']
+    print(_id)
+
+    if rds_206_11.sismember('jianyu:crawled_id', _id):
+        print('爬前判断：已经爬过了')
+        return
+
+    phone, cookies = get_cookies()
+    if not phone:
+        print('没有cookies了')
+        moenApp.send_task('bid.jianyu.detail', args=(json.dumps(bid_data),))
+
+        time.sleep(60)
+
+        return
+
+    headers = {
+        'authority': 'www.jianyu360.cn',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'accept-language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+        'cache-control': 'no-cache',
+        'pragma': 'no-cache',
+        'sec-ch-ua': '"Not?A_Brand";v="8", "Chromium";v="108", "Google Chrome";v="108"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'none',
+        'sec-fetch-user': '?1',
+        'upgrade-insecure-requests': '1',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+    }
+
+    url = f'https://www.jianyu360.cn/article/content/{_id}.html'
+    params = {
+        'aside': '0',
+    }
+    try:
+        response = requests.get(
+            url,
+            params=params,
+            cookies=cookies,
+            headers=headers,
+            proxies=get_proxy_ip(1),
+            stream=True
+        )
+        rds_206_11.hincrby('jianyu:cookies_count', phone)
+    except Exception as e:
+        moenApp.send_task('bid.jianyu.detail', args=(json.dumps(bid_data),))
+        print('ERROR: ', e)
+        return
 
     res = re.findall('<div id="tab1">(.*)<div id="attach-list"', response.text, re.S)
     if len(res)>0:
@@ -639,6 +957,9 @@ def detail(self, tmp_data):
             'final_res': final_res
         }
         moenApp.send_task('bid.jianyu.captor_cookies', args=(json.dumps(captor_data),))
+
+        moenApp.send_task('bid.jianyu.detail', args=(json.dumps(bid_data),))
+
         return
 
     data = etree.HTML(response.text)
@@ -651,6 +972,9 @@ def detail(self, tmp_data):
         bid_detail = detail
     else:
         bid_detail = ''
+        print(f'ERROR: no bid detail: {bid_data}')
+        moenApp.send_task('bid.jianyu.detail', args=(json.dumps(bid_data),))
+
 
     res = re.findall('params: (.*),', response.text)
     if res:
@@ -663,10 +987,9 @@ def detail(self, tmp_data):
     bid_data['orign_link'] = orign_link
     bid_data['bid_detail'] = bid_detail
 
-    print(bid_data)
 
     moenApp.send_task('bid.jianyu.clean', args=(json.dumps(bid_data),))
-
+    print(f'send to clean: {bid_data}')
 
 @moenApp.task(
     name='bid.jianyu.clean',
@@ -680,6 +1003,7 @@ def detail(self, tmp_data):
 )
 def data_clean(self, tmp_data):
     data = json.loads(tmp_data)
+    print(f'receive data: {data}')
     item = {}
     detail = data.get('bid_detail')
     if not detail:
@@ -705,7 +1029,6 @@ def data_clean(self, tmp_data):
     item['invite_company'] = ''
     item['win_company'] = ''
     item['agency_company'] = ''
-
 
 
 
@@ -753,8 +1076,8 @@ def data_clean(self, tmp_data):
 
 
 
-    print(item)
     moenApp.send_task('bid.jianyu.zoo', args=(str_data,))
+    print(f'send to zoo: {item}')
     item['tender_time'] = 31507200000
 
     sf = SonyFlake()
@@ -771,6 +1094,7 @@ def data_clean(self, tmp_data):
 
     str_data = json.dumps(final_data)
     moenApp.send_task('bid.jianyu.kfk', args=(str_data,))
+    print(f'send to kfk: {final_data}')
 
     #
     # else:
@@ -867,13 +1191,15 @@ def data_clean_zhiliao(self, tmp_data):
 )
 def keep_date(self, tmp_data):
     bid_data = json.loads(tmp_data)
-    print(type(bid_data), bid_data)
     if test:
         # 测试库
         MyJyTestDao.upsert(**bid_data)
     else:
         # 正式库
         MyJyDao.upsert(**bid_data)
+    save_crawled_id(bid_data)
+    print(f'save success:{bid_data}')
+
 
 @moenApp.task(
     name='bid.jianyu.kfk',
@@ -895,15 +1221,15 @@ def keep_kfk(self, tmp_data):
     # future = producer.send('spider-bid-info-v1', bid_data)
     # result = future.get(timeout=30)
     # print(result)
-    print('bid_data: ', bid_data)
     # producer = Kafka_producer()
     # print("===========> producer:", producer)
     producer = Kafka_producer()
 
     producer.sendjsondata(bid_data)
+    print(f'send to kfk: {bid_data}')
 
-    my_pro = My_Kafka_producer()
-    my_pro.sendjsondata(bid_data)
+    # my_pro = My_Kafka_producer()
+    # my_pro.sendjsondata(bid_data)
 
 
 """
@@ -1086,14 +1412,21 @@ def cross_car(pos, _id, cookies):
         'x-requested-with': 'XMLHttpRequest',
     }
 
+
+
+    params = {
+        'kds': '大数据',
+    }
+
     data = {
-        # 'antiVerifyCheck': '59,72;129,53;200,35',
         'antiVerifyCheck': pos,
         'imgw': '331',
     }
 
     response = requests.post(
         f'https://www.jianyu360.cn/article/content/{_id}.html',
+        proxies=get_proxy_ip(''),
+        params=params,
         cookies=cookies, headers=headers, data=data)
     print('发送验证', response.content.decode())
 
@@ -1116,7 +1449,7 @@ def get_cookies():
     return None, None
 
 def get_proxy_ip(key):
-    num = random.randint(0, 14)
+    num = random.randint(0, 19)
     # print(num)
     field_name = f'ip_{num}'
     proxy = rds_206_11.hget('ip_pool', field_name)
@@ -1143,6 +1476,16 @@ def in_limit(dt):
 
     # print(timestamp)  # 1672540205.0
     return timestamp >= limit_timestamp
+
+def save_crawled_id(item):
+    url = item.get('other')
+    if not url: print('error: no url')
+    _id = re.findall('content/(.*?).html', url)
+    if _id:
+        rds_206_11.sadd('jianyu:crawled_id', _id[0])
+    else:
+        print('error: no id', item)
+
 
 class Chaojiying_Client(object):
 
@@ -1533,14 +1876,30 @@ if __name__ == '__main__':
     # keep_date('')
 
     data0 = json.dumps({
-        # 'keyword': '大数据',
-        'keyword': '揭阳市榕城区卢前小学计算机设备维修和保养服务服务采购',
-        'page': 1
+        'keyword': '耀华建设管理有限公司关于绍兴市疾病预防控制中心公共卫生信息化系统维护及结核病信息维护项目单一来源采购的公示',
+        # 'keyword': '揭阳市榕城区卢前小学计算机设备维修和保养服务服务采购',
+        'page': 1,
+        'area': ''
     })
+    # search_require(data0)
     # search(data0)
-    search_keyword(data0)
+    # search_keyword(data0)
+    # search(data0)
 
+    # res = rds_206_11.sismember('jianyu:crawled_id', 'ABCY1xGYS4%2FLyg4GWN1cE8sDzMoFjRmYXxzKDg0Ni4wUX5wHCdUCaY%3D')
+    # if res:
+    #     print('you')
+    # else:
+    #     print('mei')
     # print(in_limit('2023-01-31'))
+    item = {
+        'url':'https://www.jianyu360.cn/article/content/ABCY1xGYS4%2FLyg4GWN1cE8sDzMoFjRmYXxzKDg0Ni4wUX5wHCdUCaY%3D.html'
+    }
+    # save_crawled_id(item)
+
+    # res = rds_206_11.sadd('jianyu:in_quee', '111')
+    # print(type(res))
+
 
     data1 = [
         {'_id': 'ABCY1xGYz0vIys4JGt1cE8sDzMoFjRmYXxzKz8CPT0eVmlzdCdUCdg%3D', 'area': '北京', 'city': '北京市',
@@ -1568,7 +1927,12 @@ if __name__ == '__main__':
          'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示', 'subtype': '单一',
          'site': '中国中化集团有限公司商务电子招投标平台'}
 
-    # detail(json.dumps(data2))
+    data2 =  {'_id': 'ABCY1xFdTIFAjYvRGd3cFxbCzMCEjJ3XGB1KT87LyE3fFFzbwVUCb4%3D', 'area': '云南', 'city': '红河哈尼族彝族自治州',
+              'publishtime': 1678781541, 'title': '关于为【蒙自市雨过铺中心学校】公开选取【工程监理】机构的公告', 'subtype': '竞价',
+              'site': '云南省投资审批中介超市'}
+    data2 = {'_id': 'ABCY1xGYD0eIyw7NFF6Z3UvJjIoFRFjXGh1Pw44PTogXmlzfiNUCeE%3D', 'area': '浙江', 'city': '绍兴市', 'publishtime': 1677053572, 'title': '耀华建设管理有限公司关于绍兴市疾病预防控制中心公共卫生>信息化系统维护及结核病信息维护项目单一来源采购的公示', 'subtype': '单一', 'site': '浙江政府采购网'}
+
+    # require_detail(json.dumps(data2))
 
     data3 = {'_id': 'ABCY1xGYz0vIys4JGt1cE8sDzMoFjRmYXxzKz8CPT0eVmlzdCdUCdg%3D', 'area': '北京', 'city': '北京市', 'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示', 'subtype': '单一', 'site': '中国中化集团有限公司商务电子招投标平台', 'orign_link': 'http://e.sinochemitc.com/cms/channel/ywgg1hw/124978.htm', 'bid_detail': '<div id="tab1">\n\t\t\t\t\t<div class="com-detail">\n\t\t\t\t\t\t1. 项目名称：北京银行数字化转型9号工程-“京客图谱”项目<br>2. 采购人名称：北京银行股份有限公司<br>3. 采购人地址：北京市东城区和平里东街1号<br>4. 本项目资金来源：企业自筹资金<br>5. 本次采购内容为：本项目是需要供应商通过大数据平台对商机数据进行加工处理。<br>6. 拟采购方式：单一来源<br>7. 拟采购供应商名称：北京东方国信科技股份有限公司<br>8. 拟采购供应商地址：北京市朝阳区创达三路1号院1号楼7层101<br>9. 论证专家成员：<br><table border="1"><tbody><tr><td>序号<br></td><td>姓名<br></td><td>职称<br></td></tr><tr><td>1<br></td><td>张爱恭<br></td><td>高级工程师<br></td></tr><tr><td>2<br></td><td>赵刚<br></td><td>高级工程师<br></td></tr><tr><td>3<br></td><td>杨宁<br></td><td>高级工程师<br></td></tr></tbody></table><br>10. 论证专家意见：<br>中化商务有限公司于2023年1月17日在北京复兴门外大街A2号西城金茂中心组织了相关专家对该项目需求文件及建议采购方式进行了论证。<br>经论证，专家组成员一致认为该项目需求文件完整，单一来源理由充分。<br>11. 公示期：2023年1月17日至2023年1月29日，共计5个工作日。潜在供应商对公示内容有异议的，请于公示期内将书面意见反馈至中化商务有限公司，书面文件包括：<br>? 有效的营业执照或事业单位法人证明复印件；<br>? 法定代表人授权书（如由授权代理人提出异议的）；<br>? 异议单位情况介绍（包括但不限于供应商名称、联系人、联系电话、联系邮箱等）；异议说明、能够完成本项目的声明及证明材料。<br>以上内容均需加盖公章。<br>代理机构：中化商务有限公司<br>地    址：北京复兴门外大街A2号西城金茂中心（邮编：100045）<br>业务联系人：唐昱<br>电    话：18310298572<br>传    真：010-59369323<br>电子邮箱：tangyu10@sinochem.com\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t'}
 
@@ -1588,7 +1952,7 @@ if __name__ == '__main__':
         'count': 50,
         'keyword': '马弗炉',
     }
-    # zl_search_keyword(json.dumps(data5))
+    zl_search_keyword(json.dumps(data5))
 
     # rds_206_11.hincrby('jianyu:source_classify', 'zl_2023-02-10')
 

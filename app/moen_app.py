@@ -81,8 +81,19 @@ moen_queues = [
         'bid.jianyu.captor_cookies',
         [binding(exchange=moen_exchange, routing_key='bid.jianyu.captor_cookies')],
         queue_arguments={'x-queue-mode': 'lazy'}
-    )
+    ),
 
+    Queue(
+        'bid.jianyu.require',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.require')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
+        'bid.jianyu.require.detail',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.require.detail')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
 ]
 
 
@@ -90,7 +101,8 @@ moen_queues = [
 
 MOEN = {
     # 'broker_url': 'amqp://guest:guest@127.0.0.1:5672/',
-    'broker_url': 'amqp://guest:use1ful1spi0der7@106.75.36.245:5672/',
+    'broker_url': 'amqp://guest:123456@106.75.36.245:5672/',
+    # 'broker_url': 'amqp://guest:123456@106.75.12.110:5672/',
     # 默认任务配置
     'task_create_missing_queues': True,
     'task_default_delivery_mode': 'persistent',

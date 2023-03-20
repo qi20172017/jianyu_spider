@@ -4322,30 +4322,6 @@ def judge_area(arg1, arg2):
 
         return pro, city, dis
 
-    # if arg1[-1] == '市':
-    #     if rank == 2:
-    #         pro = ''
-    #         city = arg1
-    #         dis = ''
-    #
-    #     else:
-    #         dis_dic = AREA[arg1]
-    #         for dis_ in dis_dic.keys():
-    #             dis_list = dis_dic[dis_]
-    #             if arg2 in dis_list:
-    #                 city = city_
-    #                 break
-    #             else:
-    #                 city = ''
-    #         pro = arg1
-    #         dis = arg2
-    #
-    #
-    #
-    #
-    # if arg1[-1] in ['区', '县']:
-    #     for city in
-
 
 def clean_tail(area):
     if "省" in area:
