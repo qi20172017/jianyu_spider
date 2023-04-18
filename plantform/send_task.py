@@ -1,87 +1,13 @@
+import hashlib
 import json
 import datetime
+import random
+import time
+
 import requests
 from app.moen_app import moenApp
 from model.rds import rds_206_11
 
-
-def send_tu8tu():
-
-    tag_list = [
-                '摩恩',
-                '九牧',
-                '恒洁',
-                '科勒',
-                '汉斯格雅',
-                '高仪',
-                'TOTO',
-                '箭牌',
-                'Moen',
-                'JOMOO',
-                'HEGII',
-                'Kohler',
-                'hansgrohe',
-                'GROHE',
-                'ARROW',
-                ]
-    for tag in tag_list:
-        moenApp.send_task("moen.tu8tu.list", args=(1, tag))
-
-def send_haozu():
-
-    tag_list = [
-                '摩恩',
-                '九牧',
-                '恒洁',
-                '科勒',
-                '汉斯格雅',
-                '高仪',
-                'TOTO',
-                '箭牌',
-                'Moen',
-                'JOMOO',
-                'HEGII',
-                'Kohler',
-                'hansgrohe',
-                'GROHE',
-                'ARROW',
-                ]
-    for tag in tag_list:
-        moenApp.send_task("moen.haozu.list", args=(1, tag))
-
-def send_csdn():
-    # moenApp.send_task("moen.csdn.article", args=('kdl_csdn', 1))
-    # moenApp.send_task("moen.csdn.article", args=('zjq592767809', 1))
-    moenApp.send_task("moen.csdn.article", args=('qq523176585', 1))
-
-def send_sogou():
-    author_list = [
-        '菜鸟学Python编程',
-        '网虫Spider',
-        'python爬虫人工智能大数据',
-        '进击的Coder',
-        '看雪学院',
-        'Python进击者',
-        '咸鱼学Python',
-        'K哥爬虫',
-        'feapder爬虫教程',
-        '逆向简史',
-        '逆向lin狗',
-        '大数据安全技术学习',
-        'python爬虫与js逆向',
-        'Python爬虫scrapy',
-        '爬了么',
-        '爬小虫联盟',
-        'python和逆向',
-        'Coder小Q',
-        'NightTeam',
-        '穿甲兵',
-        '爬虫术与道',
-        'python网络爬虫大数据与逆向工程',
-
-    ]
-    for author in author_list:
-        moenApp.send_task("moen.sogou.article", args=(author,))
 
 def send_zl_search():
 
@@ -1499,7 +1425,7 @@ def send_zl_search():
 
                     data = {
                         'page': 1,
-                        'count': 50,
+                        'count': 29,
                         'date': f'{yesterday}_{yesterday}',
                         'adcodes': adcode,
                         # 'bidMethods': bidMethod,
@@ -1516,30 +1442,6 @@ def send_zl_search():
     count = get_zl_data(yesterday)
     rds_206_11.hset('jianyu:zl_title:count', yesterday, count)
 
-def send_zl_search_keyword():
-
-
-    key_list = rds_206_11.smembers('jianyu:9w_keyword') # 这个keyword_1里面是过滤了一遍的
-    for key in key_list:
-        key = key.decode()
-        print(key)
-        params = {
-            'page': 1,
-            'count': 50,
-            'keyword': key,
-        }
-
-        moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
-
-    # params = {
-    #     'page': 1,
-    #     'count': 50,
-    #     'keyword': '计算机',
-    # }
-    #
-    # moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
-
-
 def get_zl_data(date):
 
     headers = {
@@ -1554,29 +1456,65 @@ def get_zl_data(date):
         'Sec-Fetch-Dest': 'empty',
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'cross-site',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
-        'sec-ch-ua': '"Not?A_Brand";v="8", "Chromium";v="108", "Google Chrome";v="108"',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
+        'sec-ch-ua': '"Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
         'sec-ch-ua-mobile': '?0',
         'sec-ch-ua-platform': '"macOS"',
     }
 
-    date = date + '_' + date
     params = {
-        'page': '1',
+        'page': '2',
         'count': '10',
-        'date': date,
+        'date': date + '_' + date,
     }
-
+    params = deal_params(params)
     response = requests.get('https://api-service-zhiliao.bailian-ai.com/search/bid', params=params, headers=headers)
+    data = response.json()
+    total = data['data']['total']
+    return total
 
-    try:
-        j_data = json.loads(response.text)
-        total = j_data['data']['total']
-        # print(total)
-        return total
-    except Exception as e:
-        print(e)
-        return 0
+def deal_params(params):
+    keyword = params.get('keyword', '')
+    random_num = random.randint(200, 400)
+    # print(random_num)
+    timestamp = str(int(time.time()*1000-random_num))
+    # print(timestamp)
+    hash_ = sign(keyword + timestamp + 'zlbxdc406fce62db4066b1f586677c9')
+    # print(hash_)
+    params['timestamp'] = timestamp
+    params['hash'] = hash_
+    return params
+
+def sign(data):
+    str_md5 = hashlib.md5(data.encode(encoding='utf-8')).hexdigest()
+    return str_md5
+
+
+def send_zl_search_keyword():
+
+
+    key_list = rds_206_11.smembers('jianyu:9w_keyword') # 这个keyword_1里面是过滤了一遍的
+    for key in key_list:
+        key = key.decode()
+        print(key)
+        params = {
+            'page': 1,
+            'count': 29,
+            'keyword': key,
+        }
+
+        moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
+
+    # params = {
+    #     'page': 1,
+    #     'count': 50,
+    #     'keyword': '计算机',
+    # }
+    #
+    # moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
+
+
+
 
 
 
@@ -2026,54 +1964,71 @@ def send_jy_zoo():
 def send_jy_require():
 
     title = [
-        '关于杭州高新区（滨江）2022年省中小企业纾困帮扶资金拟拨付企业名单公示',
-        '金华市公共资源交易中心东阳分中心关于东阳市湖溪镇政府数字乡镇-智治湖溪（指挥室大屏）采购项目的中标(成交)结果公告',
-        '关于兰溪市餐饮具集中消毒单位智能化监管系统迭代升级项目的成交结果公告',
-        '关于兰溪市餐饮具集中消毒单位智能化监管系统迭代升级项目的合同公告',
-        '浙江省成套招标代理有限公司关于杭州市拱墅区卫生监督所职业危害风险监测智能监管系统项目的成交结果公告（非政府采购',
-        '浙江展图工程咨询有限公司关于磐安县浙里山区应急智治（一期功能建设）采购项目的中标(成交)结果公告',
-        '绍兴市越城区卫生健康行政执法队职业病危害因素在线监测监控项目的合同公告',
-        '绍兴东一工程项目管理有限公司关于绍兴市越城区卫生健康行政执法队职业病危害因素在线监测监控项目的中标(成交)结果公告',
-        '浙江金华阳光招标代理有限公司关于金华市金东区卫生监督所职业卫生健康管理系统采购项目的中标(成交)结果公告',
-        '金华市金东区卫生监督所职业卫生健康管理系统采购项目的合同公告',
-        '金华市金东区卫生监督所职业卫生健康管理系统采购项目的合同',
-        '杭州师范大学附属未来科技城学校2022年琴房管理系统设备采购项目中标公示',
-        '浙江众昕项目管理有限公司关于湖州师范学院音乐学院智慧琴房管理系统（第二次）采购项目的中标(成交)结果公告',
-        '湖州师范学院音乐学院智慧琴房管理系统（第二次）采购项目的合同公告',
-        '湖州师范学院音乐学院智慧琴房管理系统（第二次）采购项目的合同',
-        '莲都区放心住宿一件事集成改革住宿场所数据采集服务项目的合同公告',
-        '莲都区放心住宿一件事集成改革住宿场所数据采集服务项目的合同',
-        '浙江明业项目管理有限公司关于莲都区放心住宿一件事集成改革住宿场所数据采集服务项目的中标(成交)结果公告',
-        '婴幼儿沐浴场所公用品消毒智能追溯系统和“卫康码”应用中标结果公告',
-        '婴幼儿沐浴场所公用品消毒智能追溯系统和“卫康码”应用中标候选人公示',
-        '萧山区数字亚运阳光酒店智慧监管政府采购项目的合同公告',
-        '萧山区数字亚运阳光酒店智慧监管政府采购项目的合同',
-        '杭州博望建设工程招标投标代理有限公司关于萧山区数字亚运阳光酒店智慧监管政府采购项目的中标(成交)结果公告',
-        '关于萧山区数字亚运阳光酒店智慧监管政府采购项目的中标(成交)结果公告[杭州博望建设工程招标投标代理有限公司]',
-        '宁波市传染病协同管理系统、宁波市慢性病协同管理系统年度维护服务成交公告',
-        '宁波市疾病预防控制中心重点行业职业健康综合风险分类和管理数据采集加工服务采购的结果公示',
-        '宁波市疾病预防控制中心肺炎病例专题数据分析项目成交公告',
-        '宁波市疾病预防控制中心宁波市肺炎专题库项目实施建设项目成交公告',
-        '宁波市疾病预防控制中心宁波市肺炎专题库项目实施建设项目结果公示',
-        '宁波市疾病预防控制中心轮状病毒疫苗和宫颈癌疫苗专题库项目采购的结果公示',
-        '关于2022年平湖市卫生健康局区域公共卫生信息平台维保项目合同续签公示',
-        '浙江省卫生健康信息中心卫生监督业务系统和视频平台安全运维服务项目的合同公告',
-        '浙江省卫生健康信息中心公共卫生智能监管集成应用项目的合同公告',
-        '浙江省国际技术设备招标有限公司关于浙江省卫生健康信息中心公共卫生智能监管集成应用项目的中标(成交)结果公告',
-        '浙江省国际技术设备招标有限公司关于浙江省卫生健康信息中心卫生监督业务系统和视频平台安全运维服务项目的中标(成交)结果公告',
-        '耀华建设管理有限公司关于绍兴市疾病预防控制中心公共卫生信息化系统维护及结核病信息维护项目单一来源采购的公示',
-        '绍兴市疾病预防控制中心绍兴市慢阻肺疾病管理系统项目的合同公告',
-        '浙江金华阳光招标代理有限公司关于金华市疾病预防控制业务信息平台三期建设项目（非政府采购）的中标公告',
-        '杭州市上城区应急管理局上城区智慧消防监控联动系统升级项目（运营服务项目）的合同公告',
-        '关于杭州市上城区应急管理局上城区智慧消防监控联动系统升级项目（运营服务项目）的中标(成交)结果公告[浙江省成套招标代理有限公司]',
-        '浙江展图工程咨询有限公司关于磐安县浙里山区应急智治（一期功能建设）采购项目的中标(成交)结果公告',
-        '绍兴东一工程项目管理有限公司关于绍兴市越城区卫生健康行政执法队职业病危害因素在线监测监控项目的中标(成交)结果公告'
+        "云主机",
+        "云服务器",
+        "云存储",
+        "云数据库",
+        "云数据库",
+        "云服务器",
+        "智能化运维",
+        "机器学习",
+        "云数据库",
+        "云主机",
+        "云硬盘",
+        "容器服务",
+        "云平台",
+        "操作系统",
+        "数据库",
+        "智能运维",
+        "边缘计算",
+        "云主机",
+        "云数据库",
+        "云存储",
+        "人工智能",
+        "机器学习",
+        "云主机",
+        "云存储",
+        "云数据库",
+        "裸金属",
+        "虚拟数据中心",
+        "大数据服务",
+        "混合云",
+        "云迁移",
+        "云安全",
+        "云服务",
+        "智能运维平台",
+        "IT运维",
+        "CMDB",
+        "IT运维",
+        "自动化运维",
+        "数智人",
+        "仿真人",
+        "3D虚拟人",
+        "超写实数字⼈",
+        "高性能计算",
+        "HPC",
+        "计算云平台",
+        "超算平台",
+        "虚拟增强现实设备",
+        "人力资源服务",
+        "科创孵化平台 科创孵化基地",
+        "数字化医疗",
+        "医保系统",
+        "电子病例",
+        "门诊系统",
+        "医疗SaaS",
+        "预约挂号",
+        "慢病管理",
+        "电子病历系统EMRS",
+        "临床决策支持系统CDSS",
+        "医院信息系统HIS",
+        "药店管理SaaS",
+        "诊所管理SaaS",
+        "云医疗",
+        "智慧医疗",
+        "数字人体检报告"
     ]
 
-    # title = [
-    #     '绍兴市疾病预防控制中心绍兴市慢阻肺疾病管理系统项目的合同公告',
-    #     '宁波市疾病预防控制中心重点行业职业健康综合风险分类和管理数据采集加工服务采购的结果公示'
-    # ]
 
     for item in title:
         data0 = json.dumps({
@@ -2089,7 +2044,7 @@ def send_jy_require():
 
 if __name__ == '__main__':
     # send_jianyu()
-    # send_jianyu_keyword()
+    send_jianyu_keyword()
 
     # send_jy_require()
 
@@ -2097,7 +2052,7 @@ if __name__ == '__main__':
     send_zl_search()
     send_zl_search_keyword()
 
-    # yesterday = '2023-01-31'
+    # yesterday = '2023-03-20'
     # count = get_zl_data(yesterday)
     # rds_206_11.hset('jianyu:zl_title:count', yesterday, count)
 

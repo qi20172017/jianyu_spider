@@ -16,11 +16,33 @@ from sonyflake import SonyFlake
 from kafka import KafkaConsumer, KafkaProducer
 import json
 import datetime
+import platform
 
 # target_topic = 'req_bid_to_spider'
-target_topic = 'req_bid_to_spider_test'
+# target_topic = 'req_temp_to_spider_test'
+# target_topic = 'req_temp_to_spider'
+#
+# # bootstrap_servers = ['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092']
+# bootstrap_servers = ['172.16.51.229:9092', '172.16.175.205:9092', '172.16.113.93:9092']
 
-bootstrap_servers = ['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092']
+if 'Linux' == platform.system():
+    print('Linux 平台')
+    RDS_DB = 11
+    # source_topic = 'req_temp_to_spider'       # 正式
+    target_topic = 'req_temp_to_spider'
+
+    bootstrap_servers = ['172.16.51.229:9092', '172.16.175.205:9092', '172.16.113.93:9092']
+
+
+else:
+    print(f'测试环境: {platform.system()}')
+    RDS_DB = 14
+    # source_topic = 'req_temp_to_spider_test'  # 测试
+    target_topic = 'req_temp_to_spider_test'
+
+    bootstrap_servers = ['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092']
+
+
 
 class Translate:
     def __init__(self):
@@ -41,7 +63,7 @@ class Translate:
             "timestamp": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + time.strftime('%z',
                                                                                                        time.localtime()),
             "data_type": data_type,
-            "data": params
+            "data": {'params':params}
         }
 
         print(final_data)
@@ -88,7 +110,7 @@ if __name__ == '__main__':
 
     # data_type = "req_bid_to_spider"
 
-    data_type = 'wechat_sougou'
+    data_type = 'weixin_sogou'
 
     # params = {
     #     "job_id": "1330100716105851",
@@ -106,33 +128,10 @@ if __name__ == '__main__':
     #     }]
     # }
 
-    params = {
-            "job_id": "baa2dd431a6737dfcc5964aecbf8fd53-suggest_concern-0",
-            "keywords": ["北京辰安科技股份有限公司",
-                         "立业贷",
-                         "小鹰信息",
-                         "领投羊",
-                         "模信网",
-                         "星光印刷",
-                         "达州发展",
-                         "广州市中智软件开发",
-                         "whoolala呼啦啦",
-                         "怡置星怡",
-                         "人人视频",
-                         "云行",
-                         "美遇",
-                         "中弘集团",
-                         "深圳联交所",
-                         "中恒宠物",
-                         "上海桑祥",
-                         "朱印船",
-                         "yogu",
-                         "三维科技",
-                         "伊远科技",
-                         "星曜半导体",
+    params = [
+                "网虫spider",
 
-                         ]
-        }
+            ]
 
     # params = {
     #     "job_id": "1330100716105851",

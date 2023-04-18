@@ -10,7 +10,10 @@
 nohup python /root/other_bid_project/Muto/plantform/translate_bid_data.py >> /data/bid_project_logs/translate.log 2>&1&
 
 """
+import sys
+sys.path.append('/root/other_bid_project/Muto') # 你的项目路径
 import platform
+
 import time
 from sonyflake import SonyFlake
 from kafka import KafkaConsumer, KafkaProducer
@@ -19,213 +22,88 @@ import datetime
 import redis
 import hashlib
 import time
+from app.moen_app import moenApp
+from app.wechat_app import wechatApp
+
 RDS_HOST = '106.75.108.206'
 RDS_PORT = 6380
-# RDS_DB = 11
 RDS_PASSWORD = 'tianzhuanjiawa_009'
 
 
-# source_topic = 'spider_bid_clean_v1'
-# target_topic = 'spider_bid_bot'
+# target_topic = 'spider_bid'
+
 
 
 if 'Linux' == platform.system():
     print('Linux 平台')
     RDS_DB = 11
-    target_topic = 'spider_bid_bot'       # 正式
+    source_topic = 'req_temp_to_spider'       # 正式
+    bootstrap_servers = ['172.16.51.229:9092', '172.16.175.205:9092', '172.16.113.93:9092']
+
+
 else:
     print(f'测试环境: {platform.system()}')
     RDS_DB = 14
-    target_topic = 'spider_bid_bot_test'  # 测试
+    source_topic = 'req_temp_to_spider_test'  # 测试
+    bootstrap_servers = ['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092']
 
 pool_206_11 = redis.ConnectionPool(host=RDS_HOST, port=RDS_PORT, db=RDS_DB, password=RDS_PASSWORD)
 rds_206_11 = redis.StrictRedis(connection_pool=pool_206_11)
 
 
-bootstrap_servers = ['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092']
 
 class Translate:
     def __init__(self, data={}):
         self.data = data
-
+        self.consumer = KafkaConsumer(source_topic,
+                                 group_id='qfm-wechat_sogou',
+                                 # auto_offset_reset='smallest',
+                                 value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+                                 # consumer_timeout_ms=1000,
+                                 bootstrap_servers=bootstrap_servers)
 
         self.producer = KafkaProducer(
             bootstrap_servers=bootstrap_servers,
-            value_serializer=lambda m: json.dumps(m).encode('ascii'),
-            buffer_memory=3173440261,
-            compression_type='gzip',
-            batch_size=1048576,
-            max_request_size=3173440261
-
+            # value_serializer=lambda m: json.dumps(m).encode('ascii')
         )
 
-    def send(self, code, params, trace_sn, job_id, data_type):
 
-        final_data = {
-            "version": 1,
-            "trace_sn": trace_sn,
-            "code": code,
-            "timestamp": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + time.strftime('%z',
-                                                                                                       time.localtime()),
-            "data_type": data_type,
-            "data": {
-                'job_id': job_id,
-                'products': params
-            }
-        }
+    def run(self):
 
-        # parmas_message = json.dumps(final_data, ensure_ascii=False)
-        # v = parmas_message.encode('utf-8')
-        print(final_data)
-        self.producer.send(target_topic, final_data,).add_callback(self.on_send_success).add_errback(self.on_send_error)
-        self.producer.flush()
-        # 打印成功发送的信息
-        # self.producer.close()
+        print(f'listing at: {source_topic}.....')
+        for message in self.consumer:
+            print("读取到：%s:%d:%d" % (message.topic, message.partition,
+                                              message.offset
+                                              ))
 
-    def on_send_success(self, record_metadata):
-        print("发送到：topic:{} partition:{} offset:{}".format(record_metadata.topic, record_metadata.partition,
-                                                       record_metadata.offset))
-
-    def on_send_error(self, excp):
-        print(excp)
-
-    # consumer.seek(TopicPartition(topic='spider-bid-info-v1', partition=0), 13)
-
-DATA_TYPE_DICT = {
-    "A":"company_search",
-    "B":"company_win_product",
-    "C":"company_competitor_analysis",
-    "D":"company_bidding_info",
-    "E":"company_cooperative_buyers",
-    "F":"company_bidding_data",
-    "G":"company_product_data_report",
-
-}
+            data_type = message.value.get('data_type')
+            trace_sn = message.value.get('trace_sn')
+            data = message.value.get('data')
 
 
+            if data_type == "weixin_sogou":
+                print('req_bid_to_spider: ', data)
+                self.wechat_sougou(trace_sn, data)
 
-def main():
-
-    kfk = Translate()
-
-    while True:
-        res_keys = [tmp.decode()[10:] for tmp in rds_206_11.keys('robot:res*')]
-        task_keys = [tmp.decode()[11:] for tmp in rds_206_11.keys('robot:task*')]
-
-        for res_key in res_keys:
-            if res_key not in task_keys:
-
-                data_type, trance_sn, job_id, task_id, company_name = res_key.split('##')
-                data_type = DATA_TYPE_DICT[data_type.split(':')[-1]]
-                data = rds_206_11.smembers('robot:res:'+res_key)
-
-                error_data = [json.loads(item.decode()) for item in data]
-                item = error_data[0]
-                if item.get('error'):
-                    kfk.send(1, error_data, trance_sn, job_id, data_type)
-                    rds_206_11.delete("robot:res:" + res_key)
-                    continue
-
-
-                if data_type == "company_search":        # A
-                    res = {
-                        "keyword": company_name
-                    }
-                    data = [json.loads(item.decode())['data'] for item in data]
-                    res['data'] = data
-
-                elif data_type == "company_win_product":     # B
-                    res = {
-                        "company_name": company_name
-                    }
-                    data = [json.loads(item.decode())['data'] for item in data]
-                    res['data'] = data
-
-                elif data_type == "company_competitor_analysis":  # C
-                    res = {
-                        "company_name": company_name
-                    }
-                    data = [json.loads(item.decode())['data'] for item in data]
-                    res['data'] = data
-
-                elif data_type == "company_bidding_info":  # D
-                    res = {
-                        "company_name": company_name
-                    }
-                    data = [json.loads(item.decode())['data'] for item in data]
-                    res['data'] = data
-
-                elif data_type == "company_cooperative_buyers":     # E
-                    res = {
-                        "company_name": company_name
-                    }
-                    # data = [json.loads(item.decode())['data'] for item in data]
-
-                    tmp_1 = []
-                    tmp_2 = []
-                    for item in data:
-                        tmp_data = json.loads(item.decode())
-                        data_s = tmp_data.get('data')
-
-                        if data_s:
-                            tmp_1.append(data_s)
-                            continue
-
-                        data_s = tmp_data.get('product')
-
-                        if data_s:
-                            tmp_2.append(data_s)
-                            continue
-
-                        res.update(json.loads(item.decode()))
-
-                    res['getPartner'] = tmp_1
-                    res['product'] = tmp_2
-                    print(res)
-
-                elif data_type == "company_bidding_data":  # F
-
-                    res = {
-                        "company_name": company_name
-                    }
-                    tmp_1 = []
-                    tmp_2 = []
-                    for item in data:
-                        tmp_data = json.loads(item.decode())
-                        data_s = tmp_data.get('F_getPartner')
-
-                        if data_s:
-                            tmp_1.append(data_s)
-                            continue
-                        data_s = tmp_data.get('product')
-                        if data_s:
-                            tmp_2.append(data_s)
-                            continue
-
-                        res.update(json.loads(item.decode()))
-
-                    res['getPartner'] = tmp_1
-                    res['product'] = tmp_2
-                    print(res)
-
-                elif data_type == "company_product_data_report":        # G
-                    res = {
-                        "product_name": company_name
-                    }
-                    for item in data:
-                        res.update(json.loads(item.decode()))
-
-                else:
-                    print('没有的类型： ', data_type)
-                    return
-                print(res)
-                kfk.send(0, res, trance_sn, job_id, data_type)
-                rds_206_11.delete("robot:res:"+res_key)
             else:
-                print(f'任务扔在继续：{"robot:res:"+res_key}')
+                print(f'没有处理函数, data_type: {data_type}, data: {data}')
 
-        print('遍历了一圈, 等待60秒~')
-        time.sleep(60)
+
+    def wechat_sougou(self, trace_sn, data):
+        print(data)
+        params = data['params']
+
+        for keyword in params:
+            print({
+                'keyword': keyword,
+                'page': 1,
+                'trace_sn': trace_sn
+            })
+            wechatApp.send_task('wechat.sougou.account', args=(json.dumps({
+                'keyword': keyword,
+                'page': 1,
+                'trace_sn': trace_sn
+            }),))
 
 
 def sign(data):
@@ -235,10 +113,6 @@ def sign(data):
 
 
 if __name__ == '__main__':
-
-
-    main()
-
     # tran.run()
     data = {
         'uuid': '6831ce0c8e721da4febe98439cb6765e',
@@ -255,14 +129,43 @@ if __name__ == '__main__':
         'other': '',
         'filepath': 'other_test/6831ce0c8e721da4febe98439cb6765e.html'
     }
-    # tran = Translate(data)
-    # tran.check()
-    # tran.run()
+    tran = Translate(data)
+    tran.run()
 
-    params = {
-        "job_id": "1330100716105851",
-        "compines": ["优刻得科技股份有限公司"]
+    data = {
+        'keywords':[
+            "立业贷",
+            "小鹰信息",
+            "领投羊",
+            "模信网",
+            "星光印刷",
+            "达州发展",
+            "广州市中智软件开发",
+            "whoolala呼啦啦",
+            "怡置星怡",
+            "人人视频",
+            "云行",
+            "美遇",
+            "中弘集团",
+            "深圳联交所",
+            "中恒宠物",
+            "上海桑祥",
+            "朱印船",
+            "yogu",
+            "三维科技",
+            "伊远科技",
+            "星曜半导体",
+        ]
     }
 
-    # tran.send(params)
+    # tran.wechat_sougou('', data)
+
     # tran.company_win_product(['优刻得科技股份有限公司'])
+    #
+    # a = {
+    #     'name':'ddd',
+    #     'add':'dd'
+    # }
+    #
+    # res = isinstance(a, dict)
+    # print(res)

@@ -10,6 +10,8 @@
 """
 import datetime
 import platform
+import random
+
 import requests
 # from zlcx_login.zlcx_gold_login import user_pool
 import redis
@@ -117,6 +119,23 @@ def self_login():
         print(token)
         return token
 
+def deal_params(params):
+    keyword = params.get('keyword', '')
+    random_num = random.randint(200, 400)
+    # print(random_num)
+    timestamp = str(int(time.time()*1000-random_num))
+    # print(timestamp)
+    hash_ = sign(keyword + timestamp + 'zlbxdc406fce62db4066b1f586677c9')
+    # print(hash_)
+    params['timestamp'] = timestamp
+    params['hash'] = hash_
+    return params
+
+def sign(data):
+    str_md5 = hashlib.md5(data.encode(encoding='utf-8')).hexdigest()
+    return str_md5
+
+
 class Zl_spider():
 
 
@@ -193,7 +212,8 @@ class Zl_spider():
                 _id = item.get('id')
                 if name == f"<font color='red'>{company_name}</font>":
                     res_id = _id
-                rds_206_11.hset('robot:company_id', company_name, res_id)
+                    rds_206_11.hset('robot:company_id', company_name, res_id)
+                    break
         return res_id
 
     def search_bid(self, hash_lib_name, key, keyword, page):
@@ -225,6 +245,7 @@ class Zl_spider():
             'count': '50',
             'keyword': keyword,
         }
+        params = deal_params(params)
 
         # url = 'https://api-service-zhiliao.bailian-ai.com/search/bid'
         # data_dict = self.download(url, params)
@@ -360,7 +381,7 @@ class Zl_spider():
             rds_206_11.sadd(res_hash_lib_name, json.dumps({'product':{}}))
         else:
             for item in data:
-                print(item)
+                # print(item)
                 rds_206_11.sadd(res_hash_lib_name, json.dumps({'product':item}))
         # rds_206_11.hdel(hash_lib_name, key)
         return continue_
@@ -422,10 +443,11 @@ class Zl_spider():
         print(params, data_dict)
         data = data_dict.get('data')
 
-        continue_ = data_dict.get('continue')
-
+        continue_ = 'false'
         if data:
             data_list = data.get('records')
+            continue_ = data.get('continue')
+
         else:
             data_list = []
         res_hash_lib_name = 'robot:res:' + hash_lib_name[11:]
@@ -1085,7 +1107,8 @@ class Zl_spider():
             j_data = json.dumps(task_info)
             rds_206_11.hset(hash_lib_name, request_id, j_data)
 
-        if is_contue and int(product_page) < max_page:
+        # if is_contue and int(product_page) < max_page:
+        if is_contue == 'OK' and int(product_page) < max_page:
             page = int(product_page) + 1
 
             params['product_page'] = page
@@ -1194,7 +1217,7 @@ class Zl_spider():
                     self.company_product_data_report(hash_lib_name, key, task_info)   # G
 
 
-                time.sleep(1)
+                time.sleep(0.3)
             time.sleep(3)
 
 
@@ -1221,8 +1244,10 @@ if __name__ == '__main__':
     # callerCountList()
     # callerMoneyList()
     # getOrgCountList()
+
     zl_spider = Zl_spider()
     zl_spider.main()
+
     # zl_spider.search_bid('1','2', '广州亮风台信息科技有限公司', '1')
     # zl_spider.search_product_id('1','405341986', '五金')
 
@@ -1230,6 +1255,5 @@ if __name__ == '__main__':
     # zl_spider.search_bid()
 
     # zl_spider.bid_info('11','22', '197', '2')
-    # _id = zl_spider.get_id('优刻得科技股份有限公司')
-    #
+    # _id = zl_spider.get_id('北京亮亮视野科技有限公司')
     # print(_id)

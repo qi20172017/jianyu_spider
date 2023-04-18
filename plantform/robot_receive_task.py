@@ -23,6 +23,7 @@ import redis
 import hashlib
 import time
 from app.moen_app import moenApp
+from app.wechat_app import wechatApp
 
 RDS_HOST = '106.75.108.206'
 RDS_PORT = 6380
@@ -119,6 +120,11 @@ class Translate:
             elif data_type == "req_bid_to_spider":                # 按需爬取
                 print('req_bid_to_spider: ', data)
                 self.req_bid_to_spider(trace_sn, data)
+            elif data_type == "wechat_sougou":
+                print('req_bid_to_spider: ', data)
+                self.wechat_sougou(trace_sn, data)
+
+
             else:
                 print(f'没有处理函数, data_type: {data_type}, data: {data}')
 
@@ -409,6 +415,16 @@ class Translate:
                 'area': ''
             }),))
 
+    def wechat_sougou(self, trace_sn, data):
+        data = data.get("params")
+        if not data:
+            return
+        for keyword in data:
+            print(keyword)
+            wechatApp.send_task('wechat.sougou.account', args=(json.dumps({
+                'keyword': keyword,
+                'page': 1,
+            }),))
 
 class CheckData:
     def __init__(self):
@@ -448,6 +464,34 @@ if __name__ == '__main__':
     }
     tran = Translate(data)
     tran.run()
+
+    data = {
+        'keywords':[
+            "立业贷",
+            "小鹰信息",
+            "领投羊",
+            "模信网",
+            "星光印刷",
+            "达州发展",
+            "广州市中智软件开发",
+            "whoolala呼啦啦",
+            "怡置星怡",
+            "人人视频",
+            "云行",
+            "美遇",
+            "中弘集团",
+            "深圳联交所",
+            "中恒宠物",
+            "上海桑祥",
+            "朱印船",
+            "yogu",
+            "三维科技",
+            "伊远科技",
+            "星曜半导体",
+        ]
+    }
+
+    # tran.wechat_sougou('', data)
 
     # tran.company_win_product(['优刻得科技股份有限公司'])
     #

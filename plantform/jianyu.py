@@ -151,19 +151,12 @@ def zl_search(self, data):
 
     data = json.loads(data)
     params = data
+    params['count'] = 10
     page = data['page']
-    # adcodes = data['adcodes']
-    # date = data['date']
-    #
-    #
-    # params = {
-    #     'page': page,
-    #     'count': '50',
-    #     'date': f'{date}_{date}',
-    #     'adcodes': adcodes,
-    # }
+
 
     proxies = get_proxy_ip('')
+    params = deal_params(params)
 
     try:
         response = requests.get(
@@ -172,14 +165,15 @@ def zl_search(self, data):
             headers=headers,
             proxies=proxies
         )
+        data = response.json()['data']
+        records = data['records']
+        total = data['total']
+
     except Exception as e:
         print("ERROR", e)
         # moenApp.send_task('bid.jianyu.zl_search', )
         moenApp.send_task('bid.jianyu.zl_search', args=(json.dumps(data),))
         return
-    data = response.json()['data']
-    records = data['records']
-    total = data['total']
 
     today_date = datetime.datetime.today().strftime('%Y-%m-%d')
 
@@ -200,7 +194,7 @@ def zl_search(self, data):
                 }),))
 
     if int(page) == 1:
-        max_page = math.ceil(total/50)
+        max_page = math.ceil(total/10)
 
         for i in range(2, min(max_page, 6)):
 
@@ -208,6 +202,18 @@ def zl_search(self, data):
             next_data = json.dumps(params)
             print(next_data)
             moenApp.send_task('bid.jianyu.zl_search', args=(next_data,))
+
+def deal_params(params):
+    keyword = params.get('keyword', '')
+    random_num = random.randint(200, 400)
+    # print(random_num)
+    timestamp = str(int(time.time()*1000-random_num))
+    # print(timestamp)
+    hash_ = sign(keyword + timestamp + 'zlbxdc406fce62db4066b1f586677c9')
+    # print(hash_)
+    params['timestamp'] = timestamp
+    params['hash'] = hash_
+    return params
 
 
 @moenApp.task(
@@ -242,19 +248,13 @@ def zl_search_keyword(self, data):
 
     data = json.loads(data)
     params = data
+    params['count'] = 10
     page = data['page']
-    # adcodes = data['adcodes']
-    # date = data['date']
-    #
-    #
-    # params = {
-    #     'page': page,
-    #     'count': '50',
-    #     'date': f'{date}_{date}',
-    #     'adcodes': adcodes,
-    # }
+
 
     proxies = get_proxy_ip('')
+    params = deal_params(params)
+
     try:
         response = requests.get(
             'https://api-service-zhiliao.bailian-ai.com/search/bid',
@@ -262,13 +262,14 @@ def zl_search_keyword(self, data):
             headers=headers,
             proxies=proxies
         )
+        data = response.json()['data']
+        records = data['records']
+        total = data['total']
+
     except Exception as e:
         print("ERROR: ", e)
         moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(data),))
         return
-    data = response.json()['data']
-    records = data['records']
-    total = data['total']
 
     # today = datetime.datetime.today()
     # yesterday = (today - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
@@ -384,7 +385,11 @@ def search(self, data):
             raise ValueError
     except Exception as e:
         print('ERROR: ', e)
-        moenApp.send_task('bid.jianyu.search', args=(json.dumps(data),))
+        moenApp.send_task('bid.jianyu.search', args=(json.dumps({
+            'keyword': keyword,
+            'page': page,
+            'area':area
+        }),))
         return
     # res = re.findall('params: (.*),', response.text)
     # if res:
@@ -453,7 +458,7 @@ def search(self, data):
         else:
             print(f'{_id} 已经爬过了')
             pass
-    if next_page and len(data_list) == 100:
+    if next_page and len(data_list) == 100 and int(page) < 10:
         # next(key, int(page)+1)
         moenApp.send_task('bid.jianyu.search', args=(json.dumps({
             'keyword': keyword,
@@ -540,7 +545,11 @@ def search_keyword(self, data):
             raise ValueError
     except Exception as e:
         print('ERROR: ', e)
-        moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps(data),))
+        moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
+            'keyword': keyword,
+            'page': page,
+            'area':area
+        }),))
         return
     # res = re.findall('params: (.*),', response.text)
     # if res:
@@ -549,7 +558,7 @@ def search_keyword(self, data):
     #     total = data['totalPage']
     # else:
     #     data_list = json.loads(response.text)['list']
-    # print(response.text)
+
     if "<title>验证码</title>" in response.text:
         moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
             'keyword': keyword,
@@ -559,10 +568,9 @@ def search_keyword(self, data):
         print(f'出现了验证码:{keyword},{page},{area}')
         return
 
-    json_data = json.loads(response.text)
-    data_list = json_data['list']
-    count = json_data['count']
-    count_keyword(f'{keyword}_{area}', count)
+    data_list = json.loads(response.text)['list']
+
+
     if not data_list:
         return
 
@@ -594,8 +602,6 @@ def search_keyword(self, data):
         if publishtime < int(time.time()) - (2 * 24 * 60 * 60):
             next_page = False
 
-        # 用于过滤已经爬过的
-        #
         not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
         if not_inquee:
             pass
@@ -606,22 +612,21 @@ def search_keyword(self, data):
         if not rds_206_11.sismember('jianyu:crawled_id', _id):
             print(f'{_id} 有效数据')
             moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
-            rds_206_11.hincrby('jianyu:source_classify', f'kw_{today_date}')
-
+            # rds_206_11.hincrby('jianyu:source_classify', f'zl_{today_date}')
         else:
             print(f'{_id} 已经爬过了')
             pass
-    if next_page and len(data_list) == 100:
+    if next_page and len(data_list) == 100 and int(page) < 10:
         # next(key, int(page)+1)
         moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
             'keyword': keyword,
             'page': int(page)+1,
-            'area':area
+            'area': area
         }),))
         print('翻页',{
             'keyword': keyword,
             'page': int(page)+1,
-            'area':area
+            'area': area
         })
 
 @moenApp.task(
@@ -707,6 +712,11 @@ def search_require(self, data):
         return
 
     if response.status_code == 702:
+        moenApp.send_task('bid.jianyu.require', args=(json.dumps({
+            'keyword': keyword,
+            'page': page,
+            'area': area
+        }),))
         raise ValueError
 
     if "<title>验证码</title>" in response.text:
@@ -1947,12 +1957,25 @@ if __name__ == '__main__':
     # producer.sendjsondata(data4)
     # time.sleep(1)
 
-    data5 = {
+    # data5 = {
+    #     'page': 1,
+    #     'count': 49,
+    #     'keyword': '大数据',
+    # }
+
+    data = {
         'page': 1,
-        'count': 50,
-        'keyword': '马弗炉',
+        'count': 29,
+        'date': f'{yesterday}_{yesterday}',
+        'adcodes': adcode,
+        # 'bidMethods': bidMethod,
+        'orgTypes': orgType,
+        'bidProcesses': bidProcesse,
+        # 'bidIndustry': bidIndustry
+
     }
-    zl_search_keyword(json.dumps(data5))
+    zl_search(json.dumps(data5))
+    # zl_search_keyword(json.dumps(data5))
 
     # rds_206_11.hincrby('jianyu:source_classify', 'zl_2023-02-10')
 
