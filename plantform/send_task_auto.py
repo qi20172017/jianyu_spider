@@ -23,9 +23,9 @@ from model.rds import rds_206_11
 
 def send_jianyu_keyword():
 
-    # key_list = rds_206_11.smembers('jianyu:9w_keyword_1') # 这个keyword_1里面是过滤了一遍的
+    key_list = rds_206_11.smembers('jianyu:9w_keyword_1') # 这个keyword_1里面是过滤了一遍的
 
-    key_list = ['1','2','3']
+    # key_list = ['1','2','3']
     area_list = [
         "安徽",
         "澳门",
@@ -67,7 +67,7 @@ def send_jianyu_keyword():
 
     for area in area_list:
         for keyword in key_list:
-            # keyword = keyword.decode()
+            keyword = keyword.decode()
             print(keyword)
             moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
                 'keyword': keyword,
@@ -1526,7 +1526,7 @@ def send_zl_search_keyword():
 
 
 if __name__ == '__main__':
-    # send_jianyu_keyword()
+    send_jianyu_keyword()
     send_zl_search()
     send_zl_search_keyword()
     print(datetime.datetime.now())

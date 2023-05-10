@@ -26,25 +26,32 @@ from app.moen_app import moenApp
 from model.rds import rds_206_11
 
 
+# headers = {
+#     'content-type': 'application/json;charset=utf-8',
+#     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
+# }
+
+headers = {
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Content-Type': 'application/json',
+    'Origin': 'https://www.zhiliaobiaoxun.com',
+    'Pragma': 'no-cache',
+    'Referer': 'https://www.zhiliaobiaoxun.com/search/',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'cross-site',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
+    'sec-ch-ua': '"Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"macOS"',
+}
+
 def get_zl_data(date):
 
-    headers = {
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Content-Type': 'application/json',
-        'Origin': 'https://www.zhiliaobiaoxun.com',
-        'Pragma': 'no-cache',
-        'Referer': 'https://www.zhiliaobiaoxun.com/search/',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'cross-site',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
-        'sec-ch-ua': '"Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"macOS"',
-    }
+
 
     params = {
         'page': '2',
@@ -76,9 +83,37 @@ def sign(data):
 
 
 
+def self_login():
+    username = "13161748024"
+    password = "Datauseful"
+    pwd = hashlib.md5(password.encode('utf-8')).hexdigest()
+    url = 'https://api-service-zhiliao.bailian-ai.com/login'
+    data = {
+        'password': pwd,
+        'rememberMe': False,
+        'smsCode': "",
+        'username': username
+    }
+    res = requests.post(url=url, data=json.dumps(data), headers=headers, verify=False)
+    data = res.json()
+    if data['code'] == 1 and data['msg'] == 'OK':
+        userId = data['data']['userId']
+        token = data['data']['token']
+
+        # user.cookies = {'userId': userId, 'token': token}
+        # return user
+        print(token)
+        headers["auth-token"] = token
+        return token
+
+
 if __name__ == '__main__':
+    self_login()
     today = datetime.datetime.today()
     yesterday = (today - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     count = get_zl_data(yesterday)
     rds_206_11.hset('jianyu:zl_title:count', yesterday, count)
     print(datetime.datetime.now(), yesterday, count)
+
+    # token = self_login()
+    # print(token)

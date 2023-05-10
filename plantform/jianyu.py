@@ -170,7 +170,7 @@ def zl_search(self, data):
         total = data['total']
 
     except Exception as e:
-        print("ERROR", e)
+        print("ERROR", e, response.text, params)
         # moenApp.send_task('bid.jianyu.zl_search', )
         moenApp.send_task('bid.jianyu.zl_search', args=(json.dumps(data),))
         return
@@ -196,7 +196,7 @@ def zl_search(self, data):
     if int(page) == 1:
         max_page = math.ceil(total/10)
 
-        for i in range(2, min(max_page, 6)):
+        for i in range(2, min(max_page, 3)): # 4.24 第三页就要登录
 
             params['page'] = i
             next_data = json.dumps(params)
@@ -303,7 +303,7 @@ def zl_search_keyword(self, data):
                 }),))
 
 
-    if next_page and int(page) <5:
+    if next_page and int(page) <3:
 
         params['page'] = int(page) + 1
         next_data = json.dumps(params)
@@ -761,8 +761,8 @@ def search_require(self, data):
 
         moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),))
         print(f'send to require detail 1 次: {data}')
-        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),))
-        print(f'send to require detail 2 次: {data}')
+        # moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),))
+        # print(f'send to require detail 2 次: {data}')
 
     if next_page and len(data_list) == 100 and int(page) < 11:
         moenApp.send_task('bid.jianyu.require', args=(json.dumps({
@@ -1201,6 +1201,8 @@ def data_clean_zhiliao(self, tmp_data):
 )
 def keep_date(self, tmp_data):
     bid_data = json.loads(tmp_data)
+    print(f'receive data: {bid_data}')
+
     if test:
         # 测试库
         MyJyTestDao.upsert(**bid_data)
@@ -1223,6 +1225,8 @@ def keep_date(self, tmp_data):
 )
 def keep_kfk(self, tmp_data):
     bid_data = json.loads(tmp_data)
+    print(f'receive data: {bid_data}')
+
     # print(type(bid_data), bid_data)
     # kfk.send_message(bid_data)
     # producer = KafkaProducer(bootstrap_servers=['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092'],
@@ -1886,12 +1890,12 @@ if __name__ == '__main__':
     # keep_date('')
 
     data0 = json.dumps({
-        'keyword': '耀华建设管理有限公司关于绍兴市疾病预防控制中心公共卫生信息化系统维护及结核病信息维护项目单一来源采购的公示',
+        'keyword': '航空发动机研究院高性能计算平台计算服务采购比价结果公示',
         # 'keyword': '揭阳市榕城区卢前小学计算机设备维修和保养服务服务采购',
         'page': 1,
         'area': ''
     })
-    # search_require(data0)
+    search_require(data0)
     # search(data0)
     # search_keyword(data0)
     # search(data0)
@@ -1957,24 +1961,24 @@ if __name__ == '__main__':
     # producer.sendjsondata(data4)
     # time.sleep(1)
 
-    # data5 = {
-    #     'page': 1,
-    #     'count': 49,
-    #     'keyword': '大数据',
-    # }
-
-    data = {
+    data5 = {
         'page': 1,
-        'count': 29,
-        'date': f'{yesterday}_{yesterday}',
-        'adcodes': adcode,
-        # 'bidMethods': bidMethod,
-        'orgTypes': orgType,
-        'bidProcesses': bidProcesse,
-        # 'bidIndustry': bidIndustry
-
+        'count': 49,
+        'keyword': '大数据',
     }
-    zl_search(json.dumps(data5))
+
+    # data = {
+    #     'page': 1,
+    #     'count': 29,
+    #     'date': f'{yesterday}_{yesterday}',
+    #     'adcodes': adcode,
+    #     # 'bidMethods': bidMethod,
+    #     'orgTypes': orgType,
+    #     'bidProcesses': bidProcesse,
+    #     # 'bidIndustry': bidIndustry
+    #
+    # }
+    # zl_search(json.dumps(data5))
     # zl_search_keyword(json.dumps(data5))
 
     # rds_206_11.hincrby('jianyu:source_classify', 'zl_2023-02-10')

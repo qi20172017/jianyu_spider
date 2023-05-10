@@ -100,8 +100,8 @@ moen_queues = [
 # http://127.0.0.1:15672/#/queues  mq地址
 
 MOEN = {
-    # 'broker_url': 'amqp://guest:guest@127.0.0.1:5672/',
-    'broker_url': 'amqp://guest:123456@106.75.36.245:5672/',
+    'broker_url': 'amqp://guest:guest@127.0.0.1:5672/',
+    # 'broker_url': 'amqp://guest:123456@106.75.36.245:5672/',
     # 'broker_url': 'amqp://guest:123456@106.75.12.110:5672/',
     # 默认任务配置
     'task_create_missing_queues': True,

@@ -1439,7 +1439,7 @@ def send_zl_search():
                     moenApp.send_task('bid.jianyu.zl_search', args=(json.dumps(data),))
                     # if i > 2:
                     #     break
-    count = get_zl_data(yesterday)
+    # count = get_zl_data(yesterday)
     rds_206_11.hset('jianyu:zl_title:count', yesterday, count)
 
 def get_zl_data(date):
@@ -1512,9 +1512,6 @@ def send_zl_search_keyword():
     # }
     #
     # moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
-
-
-
 
 
 
@@ -1964,69 +1961,69 @@ def send_jy_zoo():
 def send_jy_require():
 
     title = [
-        "云主机",
-        "云服务器",
-        "云存储",
-        "云数据库",
-        "云数据库",
-        "云服务器",
+        # "云主机",
+        # "云服务器",
+        # "云存储",
+        # "云数据库",
+        # "云数据库",
+        # "云服务器",
         "智能化运维",
-        "机器学习",
-        "云数据库",
-        "云主机",
-        "云硬盘",
-        "容器服务",
-        "云平台",
-        "操作系统",
-        "数据库",
-        "智能运维",
-        "边缘计算",
-        "云主机",
-        "云数据库",
-        "云存储",
-        "人工智能",
-        "机器学习",
-        "云主机",
-        "云存储",
-        "云数据库",
-        "裸金属",
-        "虚拟数据中心",
-        "大数据服务",
-        "混合云",
-        "云迁移",
-        "云安全",
-        "云服务",
-        "智能运维平台",
-        "IT运维",
-        "CMDB",
-        "IT运维",
-        "自动化运维",
-        "数智人",
-        "仿真人",
-        "3D虚拟人",
-        "超写实数字⼈",
-        "高性能计算",
-        "HPC",
-        "计算云平台",
-        "超算平台",
-        "虚拟增强现实设备",
-        "人力资源服务",
-        "科创孵化平台 科创孵化基地",
-        "数字化医疗",
-        "医保系统",
-        "电子病例",
-        "门诊系统",
-        "医疗SaaS",
-        "预约挂号",
-        "慢病管理",
-        "电子病历系统EMRS",
-        "临床决策支持系统CDSS",
-        "医院信息系统HIS",
-        "药店管理SaaS",
-        "诊所管理SaaS",
-        "云医疗",
-        "智慧医疗",
-        "数字人体检报告"
+        # "机器学习",
+        # "云数据库",
+        # "云主机",
+        # "云硬盘",
+        # "容器服务",
+        # "云平台",
+        # "操作系统",
+        # "数据库",
+        # "智能运维",
+        # "边缘计算",
+        # "云主机",
+        # "云数据库",
+        # "云存储",
+        # "人工智能",
+        # "机器学习",
+        # "云主机",
+        # "云存储",
+        # "云数据库",
+        # "裸金属",
+        # "虚拟数据中心",
+        # "大数据服务",
+        # "混合云",
+        # "云迁移",
+        # "云安全",
+        # "云服务",
+        # "智能运维平台",
+        # "IT运维",
+        # "CMDB",
+        # "IT运维",
+        # "自动化运维",
+        # "数智人",
+        # "仿真人",
+        # "3D虚拟人",
+        # "超写实数字⼈",
+        # "高性能计算",
+        # "HPC",
+        # "计算云平台",
+        # "超算平台",
+        # "虚拟增强现实设备",
+        # "人力资源服务",
+        # "科创孵化平台 科创孵化基地",
+        # "数字化医疗",
+        # "医保系统",
+        # "电子病例",
+        # "门诊系统",
+        # "医疗SaaS",
+        # "预约挂号",
+        # "慢病管理",
+        # "电子病历系统EMRS",
+        # "临床决策支持系统CDSS",
+        # "医院信息系统HIS",
+        # "药店管理SaaS",
+        # "诊所管理SaaS",
+        # "云医疗",
+        # "智慧医疗",
+        # "数字人体检报告"
     ]
 
 
@@ -2041,6 +2038,15 @@ def send_jy_require():
                           args=(data0,))
 
 
+def send_clean():
+    data = rds_206_11.hgetall('jianyu:require_data:duo')
+    for item in data:
+        print(item.decode())
+        title = item.decode()
+        content = rds_206_11.hget('jianyu:require_data:duo', title).decode()
+        print(content)
+        moenApp.send_task('bid.jianyu.clean', args=(content,))
+
 
 if __name__ == '__main__':
     # send_jianyu()
@@ -2049,8 +2055,10 @@ if __name__ == '__main__':
     # send_jy_require()
 
 
-    send_zl_search()
-    send_zl_search_keyword()
+    send_clean()
+
+    # send_zl_search()
+    # send_zl_search_keyword()
 
     # yesterday = '2023-03-20'
     # count = get_zl_data(yesterday)
