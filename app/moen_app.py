@@ -61,12 +61,6 @@ moen_queues = [
     ),
 
     Queue(
-        'bid.zhiliao.clean',
-        [binding(exchange=moen_exchange, routing_key='bid.zhiliao.clean')],
-        queue_arguments={'x-queue-mode': 'lazy'}
-    ),
-
-    Queue(
         'bid.jianyu.zoo',
         [binding(exchange=moen_exchange, routing_key='bid.jianyu.zoo')],
         queue_arguments={'x-queue-mode': 'lazy'}
@@ -94,19 +88,36 @@ moen_queues = [
         [binding(exchange=moen_exchange, routing_key='bid.jianyu.require.detail')],
         queue_arguments={'x-queue-mode': 'lazy'}
     ),
+    Queue(
+        'bid.zhiliao.search',
+        [binding(exchange=moen_exchange, routing_key='bid.zhiliao.search')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+    Queue(
+        'bid.zhiliao.detail',
+        [binding(exchange=moen_exchange, routing_key='bid.zhiliao.detail')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+    Queue(
+        'bid.zhiliao.clean',
+        [binding(exchange=moen_exchange, routing_key='bid.zhiliao.clean')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
 ]
 
 
 # http://127.0.0.1:15672/#/queues  mq地址
 
 MOEN = {
-    'broker_url': 'amqp://guest:guest@127.0.0.1:5672/',
-    # 'broker_url': 'amqp://guest:123456@106.75.36.245:5672/',
-    # 'broker_url': 'amqp://guest:123456@106.75.12.110:5672/',
+    # 'broker_url': 'amqp://guest:guest@127.0.0.1:5672/',
+    'broker_url': 'amqp://guest:123456@106.75.36.245:5672/',
     # 默认任务配置
     'task_create_missing_queues': True,
     'task_default_delivery_mode': 'persistent',
-    "worker_prefetch_multiplier": 4,
+    "worker_prefetch_multiplier": 1,
+    'task_acks_late': True,
+    'task_reject_on_worker_lost': True,
+    'task_acks_on_failure_or_timeout': False,
     # 'task_track_started': True,
     'timezone': "Asia/Shanghai",
     # 发送端路由

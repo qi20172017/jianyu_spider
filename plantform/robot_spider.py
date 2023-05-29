@@ -19,8 +19,8 @@ import hashlib
 import time
 import json
 import math
-RDS_HOST = '106.75.108.206'
-RDS_PORT = 6380
+RDS_HOST = '10.9.186.118'
+RDS_PORT = 6379
 RDS_PASSWORD = 'tianzhuanjiawa_009'
 
 

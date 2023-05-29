@@ -43,6 +43,14 @@ else:
     bootstrap_servers = ['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092']
 
 
+print('Linux 平台')
+RDS_DB = 11
+# source_topic = 'req_temp_to_spider'       # 正式
+target_topic = 'req_temp_to_spider'
+
+bootstrap_servers = ['172.16.51.229:9092', '172.16.175.205:9092', '172.16.113.93:9092']
+
+
 
 class Translate:
     def __init__(self):

@@ -70,7 +70,7 @@ class Kafka_producer():
                           ).add_callback(self.on_send_success).add_errback(self.on_send_error)
             self.producer.flush()
         except KafkaError as e:
-            print (e)
+            print(f'error: {e}')
         # 打印成功发送的信息
         self.producer.close()
 
@@ -149,10 +149,16 @@ def zl_search(self, data):
         'sec-ch-ua-platform': '"macOS"',
     }
 
-    data = json.loads(data)
-    params = data
+    mq_data = json.loads(data)
+    params = {}
     params['count'] = 10
-    page = data['page']
+    params['keyword'] = ''
+    params['page'] = mq_data['page']
+    params['adcodes'] = mq_data['adcodes']
+    params['orgTypes'] = mq_data['orgTypes']
+    params['bidProcesses'] = mq_data['bidProcesses']
+
+    page = mq_data['page']
 
 
     proxies = get_proxy_ip('')
@@ -170,9 +176,9 @@ def zl_search(self, data):
         total = data['total']
 
     except Exception as e:
-        print("ERROR", e, response.text, params)
+        print("ERROR", e, params)
         # moenApp.send_task('bid.jianyu.zl_search', )
-        moenApp.send_task('bid.jianyu.zl_search', args=(json.dumps(data),))
+        moenApp.send_task('bid.jianyu.zl_search', args=(json.dumps(mq_data),))
         return
 
     today_date = datetime.datetime.today().strftime('%Y-%m-%d')
@@ -184,7 +190,7 @@ def zl_search(self, data):
             title = title.replace("<font color='red'>", '').replace('</font>', '')
 
             print(title)
-            count_zl_title(title, params['date'])
+            count_zl_title(title, mq_data['date'])
 
             if rds_206_11.sadd(f'jianyu:zl_title_all:{today_date}', title):
                 moenApp.send_task('bid.jianyu.search', args=(json.dumps({
@@ -198,9 +204,9 @@ def zl_search(self, data):
 
         for i in range(2, min(max_page, 3)): # 4.24 第三页就要登录
 
-            params['page'] = i
-            next_data = json.dumps(params)
-            print(next_data)
+            mq_data['page'] = i
+            next_data = json.dumps(mq_data)
+            print(mq_data)
             moenApp.send_task('bid.jianyu.zl_search', args=(next_data,))
 
 def deal_params(params):
@@ -246,10 +252,12 @@ def zl_search_keyword(self, data):
         'sec-ch-ua-platform': '"macOS"',
     }
 
-    data = json.loads(data)
-    params = data
+    mq_data = json.loads(data)
+    params = {}
     params['count'] = 10
-    page = data['page']
+    params['page'] = mq_data['page']
+    params['keyword'] = mq_data['keyword']
+    page = mq_data['page']
 
 
     proxies = get_proxy_ip('')
@@ -268,7 +276,7 @@ def zl_search_keyword(self, data):
 
     except Exception as e:
         print("ERROR: ", e)
-        moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(data),))
+        moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(mq_data),))
         return
 
     # today = datetime.datetime.today()
@@ -303,9 +311,9 @@ def zl_search_keyword(self, data):
                 }),))
 
 
-    if next_page and int(page) <3:
+    if next_page and int(page) <2:
 
-        params['page'] = int(page) + 1
+        mq_data['page'] = int(page) + 1
         next_data = json.dumps(params)
         print(f'翻页：{next_data}')
         moenApp.send_task('bid.jianyu.zl_search_keyword', args=(next_data,))
@@ -1202,13 +1210,15 @@ def data_clean_zhiliao(self, tmp_data):
 def keep_date(self, tmp_data):
     bid_data = json.loads(tmp_data)
     print(f'receive data: {bid_data}')
-
-    if test:
-        # 测试库
-        MyJyTestDao.upsert(**bid_data)
-    else:
-        # 正式库
-        MyJyDao.upsert(**bid_data)
+    try:
+        if test:
+            # 测试库
+            MyJyTestDao.upsert(**bid_data)
+        else:
+            # 正式库
+            MyJyDao.upsert(**bid_data)
+    except Exception as e:
+        print(f"error: {e}")
     save_crawled_id(bid_data)
     print(f'save success:{bid_data}')
 
@@ -1394,7 +1404,8 @@ def gen_img(word, imgdata):
     return np.array(cv2.imencode('.jpg', imgPutText)[1]).tobytes()
 
 def cjy(im):
-    chaojiying = Chaojiying_Client('qi2017', '316952817qwe', '901155')	#用户中心>>软件ID 生成一个替换 96001
+    # chaojiying = Chaojiying_Client('qi2017', '316952817qwe', '901155')	#用户中心>>软件ID 生成一个替换 96001
+    chaojiying = Chaojiying_Client('useful', 'useful', '945901')	#用户中心>>软件ID 生成一个替换 96001
     # im = open('test_result.jpg', 'rb').read()													#本地图片文件路径 来替换 a.jpg 有时WIN系统须要//
     result = chaojiying.PostPic(im, 9103)	#1902 验证码类型  官方网站>>价格体系 3.4+版 print 后要加()
     # data = json.loads(result)
@@ -1890,12 +1901,12 @@ if __name__ == '__main__':
     # keep_date('')
 
     data0 = json.dumps({
-        'keyword': '航空发动机研究院高性能计算平台计算服务采购比价结果公示',
+        'keyword': '大数据',
         # 'keyword': '揭阳市榕城区卢前小学计算机设备维修和保养服务服务采购',
-        'page': 1,
+        'page': 7,
         'area': ''
     })
-    search_require(data0)
+    # search_require(data0)
     # search(data0)
     # search_keyword(data0)
     # search(data0)
@@ -1967,19 +1978,15 @@ if __name__ == '__main__':
         'keyword': '大数据',
     }
 
-    # data = {
-    #     'page': 1,
-    #     'count': 29,
-    #     'date': f'{yesterday}_{yesterday}',
-    #     'adcodes': adcode,
-    #     # 'bidMethods': bidMethod,
-    #     'orgTypes': orgType,
-    #     'bidProcesses': bidProcesse,
-    #     # 'bidIndustry': bidIndustry
-    #
-    # }
-    # zl_search(json.dumps(data5))
-    # zl_search_keyword(json.dumps(data5))
+    data = {"page": 1,
+            "count": 10,
+            "date": "2023-05-20_2023-05-20",
+            "adcodes": "150600",
+            "orgTypes": 4,
+            "bidProcesses": 60,
+            }
+    # zl_search(json.dumps(data))
+    zl_search_keyword(json.dumps(data5))
 
     # rds_206_11.hincrby('jianyu:source_classify', 'zl_2023-02-10')
 
