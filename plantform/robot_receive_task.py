@@ -415,6 +415,8 @@ class Translate:
                 'area': ''
             }),))
 
+            rds_206_11.sadd('jianyu:server_keyword', keyword)
+
     def wechat_sougou(self, trace_sn, data):
         data = data.get("params")
         if not data:

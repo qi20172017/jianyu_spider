@@ -86,9 +86,9 @@ if __name__ == '__main__':
 
     # data_type = "company_product_data_report"  # G
 
-    # data_type = "req_bid_to_spider"
+    data_type = "req_bid_to_spider"
 
-    data_type = 'wechat_sougou'
+    # data_type = 'wechat_sougou'
 
     # params = {
     #     "job_id": "1330100716105851",
@@ -106,33 +106,33 @@ if __name__ == '__main__':
     #     }]
     # }
 
-    params = {
-            "job_id": "baa2dd431a6737dfcc5964aecbf8fd53-suggest_concern-0",
-            "keywords": ["北京辰安科技股份有限公司",
-                         "立业贷",
-                         "小鹰信息",
-                         "领投羊",
-                         "模信网",
-                         "星光印刷",
-                         "达州发展",
-                         "广州市中智软件开发",
-                         "whoolala呼啦啦",
-                         "怡置星怡",
-                         "人人视频",
-                         "云行",
-                         "美遇",
-                         "中弘集团",
-                         "深圳联交所",
-                         "中恒宠物",
-                         "上海桑祥",
-                         "朱印船",
-                         "yogu",
-                         "三维科技",
-                         "伊远科技",
-                         "星曜半导体",
-
-                         ]
-        }
+    # params = {
+    #         "job_id": "baa2dd431a6737dfcc5964aecbf8fd53-suggest_concern-0",
+    #         "keywords": ["北京辰安科技股份有限公司",
+    #                      "立业贷",
+    #                      "小鹰信息",
+    #                      "领投羊",
+    #                      "模信网",
+    #                      "星光印刷",
+    #                      "达州发展",
+    #                      "广州市中智软件开发",
+    #                      "whoolala呼啦啦",
+    #                      "怡置星怡",
+    #                      "人人视频",
+    #                      "云行",
+    #                      "美遇",
+    #                      "中弘集团",
+    #                      "深圳联交所",
+    #                      "中恒宠物",
+    #                      "上海桑祥",
+    #                      "朱印船",
+    #                      "yogu",
+    #                      "三维科技",
+    #                      "伊远科技",
+    #                      "星曜半导体",
+    #
+    #                      ]
+    #     }
 
     # params = {
     #     "job_id": "1330100716105851",
@@ -155,9 +155,9 @@ if __name__ == '__main__':
     # }
 
 
-    # params = {
-    #     "keywords": ['服务器', '小汽车', '计算机', '数据库']
-    # }
+    params = {
+        "keywords": ['服务器', '小汽车', '计算机', '数据库']
+    }
 
     tran.send(params, data_type)
 

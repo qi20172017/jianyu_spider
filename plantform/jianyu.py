@@ -126,7 +126,7 @@ class My_Kafka_producer():
     rate_limit='5/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def zl_search(self, data):
@@ -197,7 +197,13 @@ def zl_search(self, data):
                     'keyword': title,
                     'page': 1,
                     'area':''
-                }),))
+                }),), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
 
     if int(page) == 1:
         max_page = math.ceil(total/10)
@@ -207,7 +213,13 @@ def zl_search(self, data):
             mq_data['page'] = i
             next_data = json.dumps(mq_data)
             print(mq_data)
-            moenApp.send_task('bid.jianyu.zl_search', args=(next_data,))
+            moenApp.send_task('bid.jianyu.zl_search', args=(next_data,), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
 
 def deal_params(params):
     keyword = params.get('keyword', '')
@@ -229,7 +241,7 @@ def deal_params(params):
     rate_limit='5/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def zl_search_keyword(self, data):
@@ -316,7 +328,13 @@ def zl_search_keyword(self, data):
         mq_data['page'] = int(page) + 1
         next_data = json.dumps(params)
         print(f'翻页：{next_data}')
-        moenApp.send_task('bid.jianyu.zl_search_keyword', args=(next_data,))
+        moenApp.send_task('bid.jianyu.zl_search_keyword', args=(next_data,), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
         # zl_search_keyword(next_data)
 
 
@@ -327,7 +345,7 @@ def zl_search_keyword(self, data):
     rate_limit='5/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def search(self, data):
@@ -453,6 +471,7 @@ def search(self, data):
             next_page = False
 
         not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
+        rds_206_11.sadd(f'jianyu:in_quee_{datetime.date.today()}', _id)
         if not_inquee:
             pass
         else:
@@ -472,7 +491,13 @@ def search(self, data):
             'keyword': keyword,
             'page': int(page)+1,
             'area': area
-        }),))
+        }),), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
         print('翻页',{
             'keyword': keyword,
             'page': int(page)+1,
@@ -487,7 +512,7 @@ def search(self, data):
     rate_limit='5/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def search_keyword(self, data):
@@ -611,6 +636,8 @@ def search_keyword(self, data):
             next_page = False
 
         not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
+        rds_206_11.sadd(f'jianyu:in_quee_{datetime.date.today()}', _id)
+
         if not_inquee:
             pass
         else:
@@ -619,7 +646,13 @@ def search_keyword(self, data):
 
         if not rds_206_11.sismember('jianyu:crawled_id', _id):
             print(f'{_id} 有效数据')
-            moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
+            moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
             # rds_206_11.hincrby('jianyu:source_classify', f'zl_{today_date}')
         else:
             print(f'{_id} 已经爬过了')
@@ -630,7 +663,13 @@ def search_keyword(self, data):
             'keyword': keyword,
             'page': int(page)+1,
             'area': area
-        }),))
+        }),), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
         print('翻页',{
             'keyword': keyword,
             'page': int(page)+1,
@@ -644,7 +683,7 @@ def search_keyword(self, data):
     rate_limit='5/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def search_require(self, data):
@@ -767,7 +806,13 @@ def search_require(self, data):
             'site': site
         }
 
-        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),))
+        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
         print(f'send to require detail 1 次: {data}')
         # moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),))
         # print(f'send to require detail 2 次: {data}')
@@ -777,7 +822,13 @@ def search_require(self, data):
             'keyword': keyword,
             'page': int(page)+1,
             'area':area
-        }),))
+        }),), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
 
 @moenApp.task(
     name='bid.jianyu.require.detail',
@@ -786,7 +837,7 @@ def search_require(self, data):
     rate_limit='3/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def require_detail(self, tmp_data):
@@ -887,7 +938,13 @@ def require_detail(self, tmp_data):
     bid_data['bid_detail'] = bid_detail
 
 
-    moenApp.send_task('bid.jianyu.clean', args=(json.dumps(bid_data),))
+    moenApp.send_task('bid.jianyu.clean', args=(json.dumps(bid_data),), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
     print(f'send to clean: {bid_data}')
     rds_206_11.hset('jianyu:require_data', bid_data['title'], json.dumps(bid_data))
     print('ok')
@@ -897,10 +954,10 @@ def require_detail(self, tmp_data):
     name='bid.jianyu.detail',
     bind=True,
     acks_late=True,
-    rate_limit='3/s',
+    rate_limit='7/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def detail(self, tmp_data):
@@ -1006,7 +1063,13 @@ def detail(self, tmp_data):
     bid_data['bid_detail'] = bid_detail
 
 
-    moenApp.send_task('bid.jianyu.clean', args=(json.dumps(bid_data),))
+    moenApp.send_task('bid.jianyu.clean', args=(json.dumps(bid_data),), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
     print(f'send to clean: {bid_data}')
 
 @moenApp.task(
@@ -1016,7 +1079,7 @@ def detail(self, tmp_data):
     rate_limit='30/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def data_clean(self, tmp_data):
@@ -1094,7 +1157,13 @@ def data_clean(self, tmp_data):
 
 
 
-    moenApp.send_task('bid.jianyu.zoo', args=(str_data,))
+    moenApp.send_task('bid.jianyu.zoo', args=(str_data,), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
     print(f'send to zoo: {item}')
     item['tender_time'] = 31507200000
 
@@ -1111,7 +1180,13 @@ def data_clean(self, tmp_data):
 
 
     str_data = json.dumps(final_data)
-    moenApp.send_task('bid.jianyu.kfk', args=(str_data,))
+    moenApp.send_task('bid.jianyu.kfk', args=(str_data,), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
     print(f'send to kfk: {final_data}')
 
     #
@@ -1127,7 +1202,7 @@ def data_clean(self, tmp_data):
     rate_limit='30/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def data_clean_zhiliao(self, tmp_data):
@@ -1193,7 +1268,13 @@ def data_clean_zhiliao(self, tmp_data):
     str_data = json.dumps(item)
 
     print(item)
-    moenApp.send_task('bid.jianyu.zoo', args=(str_data,))
+    moenApp.send_task('bid.jianyu.zoo', args=(str_data,), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
     # moenApp.send_task('bid.jianyu.kfk', args=(str_data,))
 
 
@@ -1204,7 +1285,7 @@ def data_clean_zhiliao(self, tmp_data):
     rate_limit='30/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def keep_date(self, tmp_data):
@@ -1217,9 +1298,9 @@ def keep_date(self, tmp_data):
         else:
             # 正式库
             MyJyDao.upsert(**bid_data)
+        save_crawled_id(bid_data)
     except Exception as e:
         print(f"error: {e}")
-    save_crawled_id(bid_data)
     print(f'save success:{bid_data}')
 
 
@@ -1230,7 +1311,7 @@ def keep_date(self, tmp_data):
     rate_limit='50/s',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def keep_kfk(self, tmp_data):
@@ -1267,7 +1348,7 @@ def keep_kfk(self, tmp_data):
     rate_limit='80/m',
     retry_kwargs={
         "max_retries": 20,
-        "default_retry_delay": 1
+        "default_retry_delay": 30
     }
 )
 def captor(self, tmp_data):
@@ -1404,8 +1485,8 @@ def gen_img(word, imgdata):
     return np.array(cv2.imencode('.jpg', imgPutText)[1]).tobytes()
 
 def cjy(im):
-    # chaojiying = Chaojiying_Client('qi2017', '316952817qwe', '901155')	#用户中心>>软件ID 生成一个替换 96001
-    chaojiying = Chaojiying_Client('useful', 'useful', '945901')	#用户中心>>软件ID 生成一个替换 96001
+    chaojiying = Chaojiying_Client('qi2017', '316952817qwe', '901155')	#用户中心>>软件ID 生成一个替换 96001
+    # chaojiying = Chaojiying_Client('useful', 'useful', '945901')	#用户中心>>软件ID 生成一个替换 96001
     # im = open('test_result.jpg', 'rb').read()													#本地图片文件路径 来替换 a.jpg 有时WIN系统须要//
     result = chaojiying.PostPic(im, 9103)	#1902 验证码类型  官方网站>>价格体系 3.4+版 print 后要加()
     # data = json.loads(result)
@@ -1508,6 +1589,7 @@ def save_crawled_id(item):
     _id = re.findall('content/(.*?).html', url)
     if _id:
         rds_206_11.sadd('jianyu:crawled_id', _id[0])
+        rds_206_11.sadd(f'jianyu:crawled_id_{datetime.date.today()}', _id[0])
     else:
         print('error: no id', item)
 

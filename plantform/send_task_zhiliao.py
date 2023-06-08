@@ -16,7 +16,7 @@ from model.rds import rds_206_11
 def send_zl_search_keyword():
 
 
-    key_list = rds_206_11.smembers('zhil_keyword') # 这个keyword_1里面是过滤了一遍的
+    key_list = rds_206_11.smembers('zhil_keyword')
 
     date_list = last_three_days()
     for date in date_list:
@@ -31,7 +31,13 @@ def send_zl_search_keyword():
             }
 
             print(params)
-            # moenApp.send_task('bid.zhiliao.search', args=(json.dumps(params),))
+            moenApp.send_task('bid.zhiliao.search', args=(json.dumps(params),), retry=True,
+            retry_policy={
+                'max_retries': 5,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            },)
 
 def last_three_days():
 
@@ -52,5 +58,5 @@ def last_three_days():
 if __name__ == '__main__':
     import datetime
     send_zl_search_keyword()
-    print(str(datetime.date.today()))
+    print('发送完成：', str(datetime.date.today()))
     # print(last_three_days())

@@ -114,7 +114,7 @@ MOEN = {
     # 默认任务配置
     'task_create_missing_queues': True,
     'task_default_delivery_mode': 'persistent',
-    "worker_prefetch_multiplier": 1,
+    "worker_prefetch_multiplier": 4,
     'task_acks_late': True,
     'task_reject_on_worker_lost': True,
     'task_acks_on_failure_or_timeout': False,
