@@ -954,7 +954,7 @@ def require_detail(self, tmp_data):
     name='bid.jianyu.detail',
     bind=True,
     acks_late=True,
-    rate_limit='7/s',
+    # rate_limit='7/s',
     retry_kwargs={
         "max_retries": 20,
         "default_retry_delay": 30
