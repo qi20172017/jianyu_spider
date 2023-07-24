@@ -20,9 +20,10 @@ from sonyflake import SonyFlake
 import datetime
 from model.rds import rds_206_11
 from common.config import judge_notice_type, single_province
-
-from common.us import upload_us3
-
+from common.us import UfileOss
+import os
+# from common.us import upload_us3
+test = False
 
 @moenApp.task(
     name='bid.zhiliao.search',
@@ -42,14 +43,14 @@ def search(self, data):
     date = data['date']
 
     phone, userId, token = get_cookies()
-
+    print(phone, userId, token)
     params = {
         'userId': userId,
         'page': page,
         'count': '50',
         'date': date + '_' + date,
         'keyword': keyword,
-        'searchScope': '1',  # 综合
+        # 'searchScope': '1',  # 综合 没有综合这个选项了
         'matchMode': '1',   # 智能匹配
     }
 
@@ -188,18 +189,98 @@ def zhiliao_detail(self, data):
     bid_data['orign_link'] = sourceUrl
     bid_data['bid_detail'] = content
     bid_data['zl_url'] = url
-    print(bid_data)
-    if 'https://bid.snapshot.qudaobao.com.cn' in content:
-        print('yes')
-        content = re.sub('"https://bid\.snapshot\.qudaobao\.com\.cn/.*?"', '""', content)
-        bid_data['bid_detail'] = content
+    bid_data['detail_type'] = 'html'
 
-        print(bid_data['bid_detail'])
+    bid_data['uuid'] = sign(url)
+
+    if 'https://bid.snapshot.qudaobao.com.cn' in content:
+        file_url_list = re.findall('"(https://bid\.snapshot\.qudaobao\.com\.cn/.*?)"', content)
+        try:
+            file_url = file_url_list[0]
+            print(file_url)
+            bid_data['bid_detail'] = downlond(file_url)
+            if '.pdf' in file_url:
+                bid_data['detail_type'] = 'pdf'
+        except Exception as e:
+            print(e)
+            content = re.sub('"https://bid\.snapshot\.qudaobao\.com\.cn/.*?"', '""', content)
+            bid_data['bid_detail'] = content
+        # print(bid_data['bid_detail'])
+
+
+    bid_data['filepath'] = upload_us3(bid_data)
+    del bid_data['detail_type']
+    print(bid_data)
 
     moenApp.send_task('bid.zhiliao.clean', args=(json.dumps(bid_data),))
     redis_key = 'zhiliao:data:' + data['pubTime']
     rds_206_11.hset(redis_key, bid_data['title'], json.dumps(bid_data))
     print('ok')
+
+
+def upload_us3(item):
+    uuid = item['uuid']
+    content = item['bid_detail']
+    detail_type = item.get('detail_type', 'html')
+
+    ufile = UfileOss()
+
+
+    if detail_type == 'html':
+        file_name = f"{uuid}.html"
+        mime_type = 'text/html'
+        content = content.encode('utf-8')
+    elif detail_type == 'pdf':
+        file_name = f"{uuid}.pdf"
+        mime_type = 'application/pdf'
+        item['bid_detail'] = ''
+    elif detail_type == 'image':
+        file_name = f"{uuid}.jpeg"
+        mime_type = 'image/jpeg'
+    else:
+        print(f'no notice_type: {item}')
+        return
+
+    if test:
+        folder_name = "other_test/"
+    else:
+        folder_name = "other_bid"
+
+
+
+    result_file = os.path.join(folder_name, file_name)
+    for _ in range(6):
+        try:
+            ufile.upload_bytesIO(result_file, content, mime_type=mime_type)
+            return result_file
+        except Exception as e:
+            print(e)
+            time.sleep(0.05)
+    return None
+
+
+def downlond(pdf_url):
+
+    headers = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Pragma': 'no-cache',
+        'Sec-Fetch-Dest': 'iframe',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'cross-site',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+        'sec-ch-ua': '"Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+    }
+    # 'https://bid.snapshot.qudaobao.com.cn/6637ba012078a3d65e3eda9ba7bb33470d00eead.pdf'
+    response = requests.get(pdf_url,
+                            headers=headers)
+
+    return response.content
 
 
 @moenApp.task(
@@ -216,12 +297,14 @@ def data_clean_zhiliao(self, tmp_data):
     data = json.loads(tmp_data)
     item = {}
     detail = data.get('bid_detail')
-    if not detail:
+    uuid = data.get('uuid')
+    filepath = data.get('filepath')
+    if not detail and not filepath:
         return
 
     zl_url = data['zl_url']
 
-    item['uuid'] = sign(zl_url)
+    item['uuid'] = uuid
     item['title'] = data['title']
 
     subtype = data.get('subtype')
@@ -246,7 +329,7 @@ def data_clean_zhiliao(self, tmp_data):
 
     item['source_name'] = '知了'
     item['other'] = zl_url
-    item['filepath'] = upload_us3(item)
+    item['filepath'] = filepath
 
     str_data = json.dumps(item)
 
@@ -342,9 +425,9 @@ if __name__ == '__main__':
     # print(a)
 
     data = json.dumps({
-        'keyword': '高性能计算',
+        'keyword': '宁夏回族自治区商务厅',
         'page': 1,
-        'date': '2023-05-18'
+        'date': '2023-05-19'
     })
 
     search(data)
@@ -450,4 +533,8 @@ https://www.zhiliaobiaoxun.com/content/285831309/b2
 https://www.zhiliaobiaoxun.com/content/285829355/b2
 https://www.zhiliaobiaoxun.com/content/329453895/b2
 https://www.zhiliaobiaoxun.com/content/258019344/b2
+
+
+
+
 """

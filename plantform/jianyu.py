@@ -280,7 +280,8 @@ def zl_search_keyword(self, data):
             'https://api-service-zhiliao.bailian-ai.com/search/bid',
             params=params,
             headers=headers,
-            proxies=proxies
+            proxies=proxies,
+            timeout=15
         )
         data = response.json()['data']
         records = data['records']
@@ -405,7 +406,8 @@ def search(self, data):
             data=data,
             verify=False,
             headers=headers,
-            proxies=proxies
+            proxies=proxies,
+            timeout=15
         )
         if response.status_code == 702:
             raise ValueError
@@ -954,7 +956,7 @@ def require_detail(self, tmp_data):
     name='bid.jianyu.detail',
     bind=True,
     acks_late=True,
-    # rate_limit='7/s',
+    rate_limit='7/s',
     retry_kwargs={
         "max_retries": 20,
         "default_retry_delay": 30
@@ -1007,7 +1009,8 @@ def detail(self, tmp_data):
             cookies=cookies,
             headers=headers,
             proxies=get_proxy_ip(1),
-            stream=True
+            stream=True,
+            timeout=15
         )
         rds_206_11.hincrby('jianyu:cookies_count', phone)
     except Exception as e:

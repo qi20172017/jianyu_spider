@@ -6,7 +6,7 @@ After=network.target
 Type=forking
 EnvironmentFile=/root/other_bid_project/Muto/doc/moen-zhiliao.conf
 WorkingDirectory=/root/other_bid_project/Muto
-ExecStart=/bin/sh -c '${CELERY_BIN} multi start ${CELERYD_NODES} -A ${CELERY_APP} --pidfile=${CELERYD_PID_FILE} --logfile=${CELERYD_LOG_FILE} -l INFO ${CELERYD_OPTS}'
+ExecStart=/bin/sh -c '${CELERY_BIN} multi start ${CELERYD_NODES} -A ${CELERY_APP} --pidfile=${CELERYD_PID_FILE} --logfile=/data/bid_project_logs/${CELERYD_LOG_FILE}_$(date +%%Y-%%m-%%d).log -l INFO ${CELERYD_OPTS}'
 
 [Install]
 WantedBy=multi-user.target
