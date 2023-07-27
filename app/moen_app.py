@@ -1,14 +1,9 @@
-import copy
-import time
 
-from celery import Task, Celery
+
+from celery import Celery
 from kombu import Exchange, Queue, binding
 
-# from common.exception import CritError
-# from duck.service.kuaishou.kuaishou import logger
-# from setting import config
 
-# kwai_data_exchange = Exchange('kuaishou.data', type='topic')
 moen_exchange = Exchange('moen', type='topic')
 
 
@@ -128,36 +123,6 @@ MOEN = {
     'worker_log_format': "[%(asctime)s: %(levelname)s/%(processName)s] %(message)s",
 }
 
-
-# class BaseTask(Task):
-#     def on_failure(self, exc, task_id, args, kwargs, einfo):
-#         logger.error('[%s]: error: %s-%s, args:[%s], kwargs:[%s]' % (exc, self.name, task_id, args, kwargs))
-#         if isinstance(exc, CritError):
-#             return
-#         elif str(exc).__contains__('操作太快'):  # 此为video detail ip限制(访问速率)
-#             return
-#         elif str(exc).__contains__('cookie无效'):  # 此为comment update ip限制(访问成功率)
-#             return
-#
-#         kwargs['exc'] = str(exc)
-#         kwargs['einfo'] = str(einfo)
-#         signature = self.signature_from_request(
-#             self.request, args, kwargs,
-#             countdown=0,
-#             eta=None,
-#             queue='kwai.failed',
-#         )
-#         signature.apply_async()
-#
-#     def on_retry(self, exc, task_id, args, kwargs, einfo):
-#         # if not str(exc).__contains__('操作太快') and not str(exc).__contains__('cookie无效'):
-#         #     logger.warning('[%s]:retry: %s-%s,  args:[%s], kwargs:[%s]' % (exc, self.name, task_id, args, kwargs))
-#         logger.warning('[%s]:retry: %s-%s,  args:[%s], kwargs:[%s]' % (exc, self.name, task_id, args, kwargs))
-#
-#     def on_success(self, retval, task_id, args, kwargs):
-#         if self.name in ('kwai.spider.cookie.heartbeat', 'kwai.spider.cookie.activate'):
-#             return
-#         logger.info('%s-[%s]:success, args:[%s], kwargs:[%s]' % (self.name, task_id, args, kwargs))
 
 
 def route_task_(ex_name, ex_type):
