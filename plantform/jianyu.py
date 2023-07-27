@@ -190,7 +190,7 @@ def zl_search(self, data):
             title = title.replace("<font color='red'>", '').replace('</font>', '')
 
             print(title)
-            count_zl_title(title, mq_data['date'])
+            # count_zl_title(title, mq_data['date'])
 
             if rds_206_11.sadd(f'jianyu:zl_title_all:{today_date}', title):
                 moenApp.send_task('bid.jianyu.search', args=(json.dumps({
@@ -304,16 +304,13 @@ def zl_search_keyword(self, data):
 
         if not next_page:         # 超出时间范围也不要进行下一步了。要不然，2万个词，每个词多个20个，就是40万个，就特别多
             break
-
         products = item['products']
-
-        # title = item['titleText']
         for title in products:
             title = title.replace("<font color='red'>", '').replace('</font>', '')
 
             print(title, pubTime)
 
-            count_zl_title(title, pubTime)
+            # count_zl_title(title, pubTime)
 
             if rds_206_11.sadd(f'jianyu:zl_title_all:{today_date}', title):
 
@@ -355,6 +352,15 @@ def search(self, data):
     page = data['page']
     keyword = data['keyword']
     area = data['area']
+
+    phone, cookies = get_cookies_history()
+    if not phone:
+        print('没有cookies了')
+        moenApp.send_task('bid.jianyu.search', args=(json.dumps(data),))
+        time.sleep(60)
+        return
+
+
     headers = {
         'authority': 'www.jianyu360.cn',
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
@@ -406,9 +412,11 @@ def search(self, data):
             data=data,
             verify=False,
             headers=headers,
+            cookies=cookies,
             proxies=proxies,
-            timeout=15
+            timeout=15,
         )
+        rds_206_11.hincrby('jianyu:cookies_count_history', phone)
         if response.status_code == 702:
             raise ValueError
     except Exception as e:
@@ -505,6 +513,25 @@ def search(self, data):
             'page': int(page)+1,
             'area': area
         })
+
+def get_cookies_history():
+    try:
+        for i in range(50):
+            phone = rds_206_11.rpop('jianyu:account_spider_history').decode()
+            print(phone)
+
+            number = rds_206_11.hget('jianyu:cookies_count_history', phone).decode()
+            if int(number) < 1500:
+                rds_206_11.lpush('jianyu:account_spider_history', phone)
+                cookies = json.loads(rds_206_11.hget('jianyu:cookies', phone).decode())
+                print(cookies)
+                return phone, cookies
+        print('没有cookies了')
+    except Exception as e:
+        print(e)
+        return None, None
+
+
 
 
 @moenApp.task(
@@ -1988,11 +2015,11 @@ if __name__ == '__main__':
     data0 = json.dumps({
         'keyword': '大数据',
         # 'keyword': '揭阳市榕城区卢前小学计算机设备维修和保养服务服务采购',
-        'page': 7,
+        'page': 1,
         'area': ''
     })
     # search_require(data0)
-    # search(data0)
+    search(data0)
     # search_keyword(data0)
     # search(data0)
 
@@ -2071,7 +2098,7 @@ if __name__ == '__main__':
             "bidProcesses": 60,
             }
     # zl_search(json.dumps(data))
-    zl_search_keyword(json.dumps(data5))
+    # zl_search_keyword(json.dumps(data5))
 
     # rds_206_11.hincrby('jianyu:source_classify', 'zl_2023-02-10')
 
