@@ -29,6 +29,7 @@ import hashlib
 from io import BytesIO
 from ufile import config,filemanager
 from sonyflake import SonyFlake
+from datetime import timedelta
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -399,7 +400,7 @@ def search(self, data):
         'notkey': '',
         'fileExists': '0',
         'city': '',
-        'searchGroup': '0',
+        'searchGroup': '1',
         'searchMode': '1',
         'wordsMode': '0',
         'additionalWords': '',
@@ -452,7 +453,6 @@ def search(self, data):
 
     print('数据的条数：', len(data_list))
 
-    today_date = datetime.datetime.today().strftime('%Y-%m-%d')
 
 
     next_page = True
@@ -477,7 +477,7 @@ def search(self, data):
         }
         # print(data)
 
-        if publishtime < int(time.time()) - (2 * 24 * 60 * 60):
+        if publishtime < int(time.time()) - get_zero_time():
             next_page = False
 
         not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
@@ -588,7 +588,7 @@ def search_keyword(self, data):
         'notkey': '',
         'fileExists': '0',
         'city': '',
-        'searchGroup': '0',
+        'searchGroup': '1', #  超前项目看不了详情，1为招标采购公告，不包括超前项目
         'searchMode': '1',
         'wordsMode': '0',
         'additionalWords': '',
@@ -637,7 +637,6 @@ def search_keyword(self, data):
         return
 
     print('数据的条数：', len(data_list))
-    today_date = datetime.datetime.today().strftime('%Y-%m-%d')
 
     next_page = True
     for bid in data_list:
@@ -661,7 +660,7 @@ def search_keyword(self, data):
         }
         # print(data)
 
-        if publishtime < int(time.time()) - (2 * 24 * 60 * 60):
+        if publishtime < int(time.time()) - get_zero_time():
             next_page = False
 
         not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
@@ -762,7 +761,7 @@ def search_require(self, data):
         'notkey': '',
         'fileExists': '0',
         'city': '',
-        'searchGroup': '0',
+        'searchGroup': '1',
         'searchMode': '0',
         'wordsMode': '0',
         'additionalWords': '',
@@ -952,8 +951,8 @@ def require_detail(self, tmp_data):
     else:
         bid_detail = ''
         print(f'ERROR: no bid detail: {bid_data}')
-        moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(bid_data),))
-
+        # moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(bid_data),))
+        return
 
     res = re.findall('params: (.*),', response.text)
     if res:
@@ -1078,8 +1077,8 @@ def detail(self, tmp_data):
     else:
         bid_detail = ''
         print(f'ERROR: no bid detail: {bid_data}')
-        moenApp.send_task('bid.jianyu.detail', args=(json.dumps(bid_data),))
-
+        # moenApp.send_task('bid.jianyu.detail', args=(json.dumps(bid_data),))
+        return
 
     res = re.findall('params: (.*),', response.text)
     if res:
@@ -1623,6 +1622,28 @@ def save_crawled_id(item):
     else:
         print('error: no id', item)
 
+def get_zero_time(num=2):
+    """
+    生成某天23:59:59秒时的时间戳
+    :param num:
+    :return:
+    """
+    # 获取当前时间
+    current_time = datetime.datetime.now()
+    # 计算前天的日期
+    previous_day = current_time - timedelta(days=num)
+    # 设置时间为前天晚上23:59:59
+    previous_day_midnight = datetime.datetime(
+        year=previous_day.year,
+        month=previous_day.month,
+        day=previous_day.day,
+        hour=23,
+        minute=59,
+        second=59
+    )
+    # 获取时间戳
+    timestamp = previous_day_midnight.timestamp()
+    return int(timestamp)
 
 class Chaojiying_Client(object):
 

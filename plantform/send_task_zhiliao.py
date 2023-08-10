@@ -99,7 +99,7 @@ def last_three_days():
 
 if __name__ == '__main__':
     import datetime
-    # send_zl_search_keyword()
-    send_zl_search_company()
+    send_zl_search_keyword()
+    # send_zl_search_company()
     print('发送完成：', str(datetime.date.today()))
     # print(last_three_days())
