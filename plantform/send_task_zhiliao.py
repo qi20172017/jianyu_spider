@@ -16,36 +16,36 @@ from model.rds import rds_206_11
 def send_zl_search_keyword():
 
 
-    # key_list = rds_206_11.smembers('zhil_keyword1')
-    key_list = [
-        '云主机',
-        '云服务器',
-        '云存储',
-        '云管理',
-        '上云',
-        '弹性扩容',
-        '云上架构',
-        '云上部署',
-        '云平台',
-        '云计算平台',
-        '云计算资源',
-        '云托管',
-        '服务器托管',
-        '云资源',
-        '云资源监控',
-        '高性能计算',
-        '并行计算',
-        '矩阵计算',
-        '神经网络优化',
-        'CUDA',
-        'cuDDN',
-        '算力容器',
-        '算力平台',
-    ]
+    key_list = rds_206_11.smembers('zhil_keyword')
+    # key_list = [
+    #     '云主机',
+    #     '云服务器',
+    #     '云存储',
+    #     '云管理',
+    #     '上云',
+    #     '弹性扩容',
+    #     '云上架构',
+    #     '云上部署',
+    #     '云平台',
+    #     '云计算平台',
+    #     '云计算资源',
+    #     '云托管',
+    #     '服务器托管',
+    #     '云资源',
+    #     '云资源监控',
+    #     '高性能计算',
+    #     '并行计算',
+    #     '矩阵计算',
+    #     '神经网络优化',
+    #     'CUDA',
+    #     'cuDDN',
+    #     '算力容器',
+    #     '算力平台',
+    # ]
     date_list = last_three_days()
     for date in date_list:
         for key in key_list:
-            # key = key.decode()
+            key = key.decode()
             print(key)
             params = {
 
@@ -100,7 +100,7 @@ def last_three_days():
     current_date = datetime.date.today()
 
     # 计算一年前的日期
-    one_year_ago = current_date - datetime.timedelta(days=2)
+    one_year_ago = current_date - datetime.timedelta(days=7)
 
     # 打印出一年前的每一天的日期
     res = []
