@@ -18,7 +18,7 @@ import json
 import requests
 from model.rds import rds_206_11
 from app.moen_app import moenApp
-from model.msql.my_dao.my_csdn_dao import MyCsdnDao
+# from model.msql.my_dao.my_csdn_dao import MyCsdnDao
 import random
 import hashlib
 from hashlib import md5
@@ -341,7 +341,7 @@ def zl_search_keyword(self, data):
     name='bid.jianyu.search',
     bind=True,
     acks_late=True,
-    rate_limit='5/s',
+    rate_limit='2/s',
     retry_kwargs={
         "max_retries": 20,
         "default_retry_delay": 30
@@ -401,7 +401,7 @@ def search(self, data):
         'fileExists': '0',
         'city': '',
         'searchGroup': '1',
-        'searchMode': '1',
+        'searchMode': '0',  # 20231118 0表示精准搜索
         'wordsMode': '0',
         'additionalWords': '',
     }
@@ -444,9 +444,15 @@ def search(self, data):
         }),))
         print(f'出现了验证码:{keyword},{page},{area}')
         return
+    # print(response.text)
+    try:
+        data_list = json.loads(response.text)['list']
+    except Exception as e:
 
-    data_list = json.loads(response.text)['list']
-
+        print(f'出现错误请求：{data}')
+        print(f'错误页面：{response.content.decode()}')
+        self.retry(countdown=10)
+        return
 
     if not data_list:
         return
@@ -476,8 +482,7 @@ def search(self, data):
             'site': site
         }
         # print(data)
-
-        if publishtime < int(time.time()) - get_zero_time():
+        if int(publishtime) < get_zero_time():
             next_page = False
 
         not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
@@ -495,7 +500,7 @@ def search(self, data):
         else:
             print(f'{_id} 已经爬过了')
             pass
-    if next_page and len(data_list) == 100 and int(page) < 10:
+    if next_page and len(data_list) == 100 and int(page) < 5:
         # next(key, int(page)+1)
         moenApp.send_task('bid.jianyu.search', args=(json.dumps({
             'keyword': keyword,
@@ -589,7 +594,7 @@ def search_keyword(self, data):
         'fileExists': '0',
         'city': '',
         'searchGroup': '1', #  超前项目看不了详情，1为招标采购公告，不包括超前项目
-        'searchMode': '1',
+        'searchMode': '0',
         'wordsMode': '0',
         'additionalWords': '',
     }
@@ -660,7 +665,7 @@ def search_keyword(self, data):
         }
         # print(data)
 
-        if publishtime < int(time.time()) - get_zero_time():
+        if publishtime < get_zero_time():
             next_page = False
 
         not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
@@ -685,7 +690,7 @@ def search_keyword(self, data):
         else:
             print(f'{_id} 已经爬过了')
             pass
-    if next_page and len(data_list) == 100 and int(page) < 10:
+    if next_page and len(data_list) == 100 and int(page) < 5:
         # next(key, int(page)+1)
         moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
             'keyword': keyword,
@@ -845,7 +850,7 @@ def search_require(self, data):
         # moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),))
         # print(f'send to require detail 2 次: {data}')
 
-    if next_page and len(data_list) == 100 and int(page) < 11:
+    if next_page and len(data_list) == 100 and int(page) < 5:
         moenApp.send_task('bid.jianyu.require', args=(json.dumps({
             'keyword': keyword,
             'page': int(page)+1,
@@ -982,7 +987,7 @@ def require_detail(self, tmp_data):
     name='bid.jianyu.detail',
     bind=True,
     acks_late=True,
-    rate_limit='7/s',
+    rate_limit='7/s', # 处理堆积的时候，把速率限制注释掉
     retry_kwargs={
         "max_retries": 20,
         "default_retry_delay": 30
@@ -993,6 +998,17 @@ def detail(self, tmp_data):
     bid_data = json.loads(tmp_data)
     _id = bid_data['_id']
     print(_id)
+
+    # 几百万数据堆积后，用这个根据时间区分开
+    # publishtime = bid_data.get('publishtime', 0)
+    #
+    # if int(publishtime) < get_zero_time():
+    #     moenApp.send_task('bid.jianyu.history_tmp', args=(json.dumps(bid_data),))
+    # else:
+    #     moenApp.send_task('bid.jianyu.current_tmp', args=(json.dumps(bid_data),))
+    #
+    # return
+
 
     if rds_206_11.sismember('jianyu:crawled_id', _id):
         print('爬前判断：已经爬过了')
@@ -1100,6 +1116,44 @@ def detail(self, tmp_data):
                 'interval_max': 0.2,
             },)
     print(f'send to clean: {bid_data}')
+
+# 用于存老数据
+@moenApp.task(
+    name='bid.jianyu.history_tmp',
+    bind=True,
+    acks_late=True,
+    rate_limit='5/s',
+    retry_kwargs={
+        "max_retries": 20,
+        "default_retry_delay": 30
+    }
+)
+def history_tmp(self, data):
+    data = json.loads(data)
+
+    print(data)
+    # time.sleep(15)
+    moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
+
+
+# 用于暂存最新的数据
+@moenApp.task(
+    name='bid.jianyu.current_tmp',
+    bind=True,
+    acks_late=True,
+    # rate_limit='7/s',
+    retry_kwargs={
+        "max_retries": 20,
+        "default_retry_delay": 30
+    }
+)
+def current_tmp(self, data):
+    data = json.loads(data)
+
+    print(data)
+    # time.sleep(15)
+    moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
+
 
 @moenApp.task(
     name='bid.jianyu.clean',
@@ -1311,7 +1365,7 @@ def data_clean_zhiliao(self, tmp_data):
     name='bid.jianyu.zoo',
     bind=True,
     acks_late=True,
-    rate_limit='30/s',
+    # rate_limit='30/s',
     retry_kwargs={
         "max_retries": 20,
         "default_retry_delay": 30
@@ -1622,7 +1676,7 @@ def save_crawled_id(item):
     else:
         print('error: no id', item)
 
-def get_zero_time(num=2):
+def get_zero_time(num=3):
     """
     生成某天23:59:59秒时的时间戳
     :param num:
@@ -2034,16 +2088,16 @@ if __name__ == '__main__':
     # keep_date('')
 
     data0 = json.dumps({
-        'keyword': '大数据',
+        'keyword': 'fdsfsdfdsds',
         # 'keyword': '揭阳市榕城区卢前小学计算机设备维修和保养服务服务采购',
         'page': 1,
         'area': ''
     })
     # search_require(data0)
-    search(data0)
+    # search(data0)
     # search_keyword(data0)
     # search(data0)
-
+    print(get_zero_time())
     # res = rds_206_11.sismember('jianyu:crawled_id', 'ABCY1xGYS4%2FLyg4GWN1cE8sDzMoFjRmYXxzKDg0Ni4wUX5wHCdUCaY%3D')
     # if res:
     #     print('you')

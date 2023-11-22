@@ -39,6 +39,11 @@ wechat_queues = [
         [binding(exchange=wechat_exchange, routing_key='wechat.zoo')],
         queue_arguments={'x-queue-mode': 'lazy'}
     ),
+    Queue(
+        'wechat.sougou.account.one',
+        [binding(exchange=wechat_exchange, routing_key='wechat.sougou.account.one')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
 
 ]
 

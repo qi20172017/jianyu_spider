@@ -50,6 +50,18 @@ moen_queues = [
     ),
 
     Queue(
+        'bid.jianyu.history_tmp',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.history_tmp')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
+        'bid.jianyu.current_tmp',
+        [binding(exchange=moen_exchange, routing_key='bid.jianyu.current_tmp')],
+        queue_arguments={'x-queue-mode': 'lazy'}
+    ),
+
+    Queue(
         'bid.jianyu.clean',
         [binding(exchange=moen_exchange, routing_key='bid.jianyu.clean')],
         queue_arguments={'x-queue-mode': 'lazy'}
