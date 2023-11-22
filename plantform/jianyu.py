@@ -8,7 +8,9 @@
 @Date  : 2023/1/16 下午4:46
 @Desc  : 
 """
+import sys
 
+sys.path.append('F:\git\jianyu_spider')
 import os
 import math
 import re
@@ -18,7 +20,7 @@ import json
 import requests
 from model.rds import rds_206_11
 from app.moen_app import moenApp
-from model.msql.my_dao.my_csdn_dao import MyCsdnDao
+# from model.msql.my_dao.my_csdn_dao import MyCsdnDao
 import random
 import hashlib
 from hashlib import md5
@@ -27,7 +29,7 @@ import base64
 import cv2
 import hashlib
 from io import BytesIO
-from ufile import config,filemanager
+from ufile import config, filemanager
 from sonyflake import SonyFlake
 from datetime import timedelta
 
@@ -40,12 +42,9 @@ from model.msql.my_dao.my_jy_dao import MyJyDao, MyJyTestDao
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 
-
 test = False
 
-
-
-bootstrap_servers=['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092']
+bootstrap_servers = ['172.16.63.83:9092', '172.16.113.148:9092', '172.16.135.145:9092']
 
 
 class Kafka_producer():
@@ -57,18 +56,18 @@ class Kafka_producer():
 
         self.kafkatopic = "spider_bid"
         self.producer = KafkaProducer(bootstrap_servers=bootstrap_servers
-                )
+                                      )
 
     def sendjsondata(self, params):
         try:
-            parmas_message = json.dumps(params,ensure_ascii=False)
+            parmas_message = json.dumps(params, ensure_ascii=False)
             # print(parmas_message)
             v = parmas_message.encode('utf-8')
             # print("send msg:(k,v)",k,v)
             self.producer.send(self.kafkatopic, v,
-                          # key=k,
-                          # partition=int(self.key)
-                          ).add_callback(self.on_send_success).add_errback(self.on_send_error)
+                               # key=k,
+                               # partition=int(self.key)
+                               ).add_callback(self.on_send_success).add_errback(self.on_send_error)
             self.producer.flush()
         except KafkaError as e:
             print(f'error: {e}')
@@ -83,6 +82,7 @@ class Kafka_producer():
     def on_send_error(self, excp):
         print(excp)
 
+
 class My_Kafka_producer():
     '''''
     生产模块：根据不同的key，区分消息
@@ -92,21 +92,21 @@ class My_Kafka_producer():
 
         self.kafkatopic = "bid_test_v1"
         self.producer = KafkaProducer(bootstrap_servers=bootstrap_servers
-                )
+                                      )
 
     def sendjsondata(self, params):
         try:
-            parmas_message = json.dumps(params,ensure_ascii=False)
+            parmas_message = json.dumps(params, ensure_ascii=False)
             # print(parmas_message)
             v = parmas_message.encode('utf-8')
             # print("send msg:(k,v)",k,v)
             self.producer.send(self.kafkatopic, v,
-                          # key=k,
-                          # partition=int(self.key)
-                          ).add_callback(self.on_send_success).add_errback(self.on_send_error)
+                               # key=k,
+                               # partition=int(self.key)
+                               ).add_callback(self.on_send_success).add_errback(self.on_send_error)
             self.producer.flush()
         except KafkaError as e:
-            print (e)
+            print(e)
         # 打印成功发送的信息
         self.producer.close()
 
@@ -117,7 +117,6 @@ class My_Kafka_producer():
 
     def on_send_error(self, excp):
         print(excp)
-
 
 
 @moenApp.task(
@@ -131,7 +130,6 @@ class My_Kafka_producer():
     }
 )
 def zl_search(self, data):
-
     headers = {
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
@@ -160,7 +158,6 @@ def zl_search(self, data):
     params['bidProcesses'] = mq_data['bidProcesses']
 
     page = mq_data['page']
-
 
     proxies = get_proxy_ip('')
     params = deal_params(params)
@@ -197,36 +194,37 @@ def zl_search(self, data):
                 moenApp.send_task('bid.jianyu.search', args=(json.dumps({
                     'keyword': title,
                     'page': 1,
-                    'area':''
+                    'area': ''
                 }),), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                                  retry_policy={
+                                      'max_retries': 5,
+                                      'interval_start': 0,
+                                      'interval_step': 0.2,
+                                      'interval_max': 0.2,
+                                  }, )
 
     if int(page) == 1:
-        max_page = math.ceil(total/10)
+        max_page = math.ceil(total / 10)
 
-        for i in range(2, min(max_page, 3)): # 4.24 第三页就要登录
+        for i in range(2, min(max_page, 3)):  # 4.24 第三页就要登录
 
             mq_data['page'] = i
             next_data = json.dumps(mq_data)
             print(mq_data)
             moenApp.send_task('bid.jianyu.zl_search', args=(next_data,), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                              retry_policy={
+                                  'max_retries': 5,
+                                  'interval_start': 0,
+                                  'interval_step': 0.2,
+                                  'interval_max': 0.2,
+                              }, )
+
 
 def deal_params(params):
     keyword = params.get('keyword', '')
     random_num = random.randint(200, 400)
     # print(random_num)
-    timestamp = str(int(time.time()*1000-random_num))
+    timestamp = str(int(time.time() * 1000 - random_num))
     # print(timestamp)
     hash_ = sign(keyword + timestamp + 'zlbxdc406fce62db4066b1f586677c9')
     # print(hash_)
@@ -246,7 +244,6 @@ def deal_params(params):
     }
 )
 def zl_search_keyword(self, data):
-
     headers = {
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
@@ -271,7 +268,6 @@ def zl_search_keyword(self, data):
     params['page'] = mq_data['page']
     params['keyword'] = mq_data['keyword']
     page = mq_data['page']
-
 
     proxies = get_proxy_ip('')
     params = deal_params(params)
@@ -303,7 +299,7 @@ def zl_search_keyword(self, data):
 
         next_page = in_limit(pubTime)
 
-        if not next_page:         # 超出时间范围也不要进行下一步了。要不然，2万个词，每个词多个20个，就是40万个，就特别多
+        if not next_page:  # 超出时间范围也不要进行下一步了。要不然，2万个词，每个词多个20个，就是40万个，就特别多
             break
         products = item['products']
         for title in products:
@@ -314,26 +310,23 @@ def zl_search_keyword(self, data):
             # count_zl_title(title, pubTime)
 
             if rds_206_11.sadd(f'jianyu:zl_title_all:{today_date}', title):
-
                 moenApp.send_task('bid.jianyu.search', args=(json.dumps({
                     'keyword': title,
                     'page': 1,
-                    'area':''
+                    'area': ''
                 }),))
 
-
-    if next_page and int(page) <2:
-
+    if next_page and int(page) < 2:
         mq_data['page'] = int(page) + 1
         next_data = json.dumps(params)
         print(f'翻页：{next_data}')
         moenApp.send_task('bid.jianyu.zl_search_keyword', args=(next_data,), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                          retry_policy={
+                              'max_retries': 5,
+                              'interval_start': 0,
+                              'interval_step': 0.2,
+                              'interval_max': 0.2,
+                          }, )
         # zl_search_keyword(next_data)
 
 
@@ -348,7 +341,6 @@ def zl_search_keyword(self, data):
     }
 )
 def search(self, data):
-
     data = json.loads(data)
     page = data['page']
     keyword = data['keyword']
@@ -360,7 +352,6 @@ def search(self, data):
         moenApp.send_task('bid.jianyu.search', args=(json.dumps(data),))
         time.sleep(60)
         return
-
 
     headers = {
         'authority': 'www.jianyu360.cn',
@@ -425,7 +416,7 @@ def search(self, data):
         moenApp.send_task('bid.jianyu.search', args=(json.dumps({
             'keyword': keyword,
             'page': page,
-            'area':area
+            'area': area
         }),))
         return
     # res = re.findall('params: (.*),', response.text)
@@ -440,20 +431,17 @@ def search(self, data):
         moenApp.send_task('bid.jianyu.search', args=(json.dumps({
             'keyword': keyword,
             'page': page,
-            'area':area
+            'area': area
         }),))
         print(f'出现了验证码:{keyword},{page},{area}')
         return
 
     data_list = json.loads(response.text)['list']
 
-
     if not data_list:
         return
 
     print('数据的条数：', len(data_list))
-
-
 
     next_page = True
     for bid in data_list:
@@ -499,20 +487,21 @@ def search(self, data):
         # next(key, int(page)+1)
         moenApp.send_task('bid.jianyu.search', args=(json.dumps({
             'keyword': keyword,
-            'page': int(page)+1,
+            'page': int(page) + 1,
             'area': area
         }),), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
-        print('翻页',{
+                          retry_policy={
+                              'max_retries': 5,
+                              'interval_start': 0,
+                              'interval_step': 0.2,
+                              'interval_max': 0.2,
+                          }, )
+        print('翻页', {
             'keyword': keyword,
-            'page': int(page)+1,
+            'page': int(page) + 1,
             'area': area
         })
+
 
 def get_cookies_history():
     try:
@@ -532,8 +521,6 @@ def get_cookies_history():
         return None, None
 
 
-
-
 @moenApp.task(
     name='bid.jianyu.search_keyword',
     bind=True,
@@ -545,7 +532,6 @@ def get_cookies_history():
     }
 )
 def search_keyword(self, data):
-
     data = json.loads(data)
     page = data['page']
     keyword = data['keyword']
@@ -588,7 +574,7 @@ def search_keyword(self, data):
         'notkey': '',
         'fileExists': '0',
         'city': '',
-        'searchGroup': '1', #  超前项目看不了详情，1为招标采购公告，不包括超前项目
+        'searchGroup': '1',  # 超前项目看不了详情，1为招标采购公告，不包括超前项目
         'searchMode': '1',
         'wordsMode': '0',
         'additionalWords': '',
@@ -610,7 +596,7 @@ def search_keyword(self, data):
         moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
             'keyword': keyword,
             'page': page,
-            'area':area
+            'area': area
         }),))
         return
     # res = re.findall('params: (.*),', response.text)
@@ -625,13 +611,12 @@ def search_keyword(self, data):
         moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
             'keyword': keyword,
             'page': page,
-            'area':area
+            'area': area
         }),))
         print(f'出现了验证码:{keyword},{page},{area}')
         return
 
     data_list = json.loads(response.text)['list']
-
 
     if not data_list:
         return
@@ -675,12 +660,12 @@ def search_keyword(self, data):
         if not rds_206_11.sismember('jianyu:crawled_id', _id):
             print(f'{_id} 有效数据')
             moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                              retry_policy={
+                                  'max_retries': 5,
+                                  'interval_start': 0,
+                                  'interval_step': 0.2,
+                                  'interval_max': 0.2,
+                              }, )
             # rds_206_11.hincrby('jianyu:source_classify', f'zl_{today_date}')
         else:
             print(f'{_id} 已经爬过了')
@@ -689,20 +674,21 @@ def search_keyword(self, data):
         # next(key, int(page)+1)
         moenApp.send_task('bid.jianyu.search_keyword', args=(json.dumps({
             'keyword': keyword,
-            'page': int(page)+1,
+            'page': int(page) + 1,
             'area': area
         }),), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
-        print('翻页',{
+                          retry_policy={
+                              'max_retries': 5,
+                              'interval_start': 0,
+                              'interval_step': 0.2,
+                              'interval_max': 0.2,
+                          }, )
+        print('翻页', {
             'keyword': keyword,
-            'page': int(page)+1,
+            'page': int(page) + 1,
             'area': area
         })
+
 
 @moenApp.task(
     name='bid.jianyu.require',
@@ -715,7 +701,6 @@ def search_keyword(self, data):
     }
 )
 def search_require(self, data):
-
     data = json.loads(data)
     page = data['page']
     keyword = data['keyword']
@@ -781,7 +766,7 @@ def search_require(self, data):
         moenApp.send_task('bid.jianyu.require', args=(json.dumps({
             'keyword': keyword,
             'page': page,
-            'area':area
+            'area': area
         }),))
         print(f'请求有问题:{keyword},{page},{area}')
         return
@@ -798,7 +783,7 @@ def search_require(self, data):
         moenApp.send_task('bid.jianyu.require', args=(json.dumps({
             'keyword': keyword,
             'page': page,
-            'area':area
+            'area': area
         }),))
         print(f'出现了验证码:{keyword},{page},{area}')
         return
@@ -815,7 +800,6 @@ def search_require(self, data):
 
     next_page = True
     for bid in data_list:
-
         _id = bid['_id']
         bid_area = bid.get('area')
         city = bid.get('city')
@@ -835,12 +819,12 @@ def search_require(self, data):
         }
 
         moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                          retry_policy={
+                              'max_retries': 5,
+                              'interval_start': 0,
+                              'interval_step': 0.2,
+                              'interval_max': 0.2,
+                          }, )
         print(f'send to require detail 1 次: {data}')
         # moenApp.send_task('bid.jianyu.require.detail', args=(json.dumps(data),))
         # print(f'send to require detail 2 次: {data}')
@@ -848,15 +832,16 @@ def search_require(self, data):
     if next_page and len(data_list) == 100 and int(page) < 11:
         moenApp.send_task('bid.jianyu.require', args=(json.dumps({
             'keyword': keyword,
-            'page': int(page)+1,
-            'area':area
+            'page': int(page) + 1,
+            'area': area
         }),), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                          retry_policy={
+                              'max_retries': 5,
+                              'interval_start': 0,
+                              'interval_step': 0.2,
+                              'interval_max': 0.2,
+                          }, )
+
 
 @moenApp.task(
     name='bid.jianyu.require.detail',
@@ -869,11 +854,9 @@ def search_require(self, data):
     }
 )
 def require_detail(self, tmp_data):
-
     bid_data = json.loads(tmp_data)
     _id = bid_data['_id']
     print(f'receive data: {bid_data}')
-
 
     phone, cookies = get_cookies()
     if not phone:
@@ -928,9 +911,7 @@ def require_detail(self, tmp_data):
     else:
         final_res = response.text
 
-
     if '<title>验证码</title>' in final_res:
-
         captor_data = {
             '_id': _id,
             'cookies': cookies,
@@ -965,14 +946,13 @@ def require_detail(self, tmp_data):
     bid_data['orign_link'] = orign_link
     bid_data['bid_detail'] = bid_detail
 
-
     moenApp.send_task('bid.jianyu.clean', args=(json.dumps(bid_data),), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                      retry_policy={
+                          'max_retries': 5,
+                          'interval_start': 0,
+                          'interval_step': 0.2,
+                          'interval_max': 0.2,
+                      }, )
     print(f'send to clean: {bid_data}')
     rds_206_11.hset('jianyu:require_data', bid_data['title'], json.dumps(bid_data))
     print('ok')
@@ -989,7 +969,6 @@ def require_detail(self, tmp_data):
     }
 )
 def detail(self, tmp_data):
-
     bid_data = json.loads(tmp_data)
     _id = bid_data['_id']
     print(_id)
@@ -1038,23 +1017,21 @@ def detail(self, tmp_data):
             stream=True,
             timeout=15
         )
-        rds_206_11.hincrby('jianyu:cookies_count', phone)
+        rds_206_11.hincrby('jianyu:cookies_count_tmp', phone)
     except Exception as e:
         moenApp.send_task('bid.jianyu.detail', args=(json.dumps(bid_data),))
         print('ERROR: ', e)
         return
 
     res = re.findall('<div id="tab1">(.*)<div id="attach-list"', response.text, re.S)
-    if len(res)>0:
+    if len(res) > 0:
         res = res[0]
         final_res = '<div id="tab1">' + res
 
     else:
         final_res = response.text
 
-
     if '<title>验证码</title>' in final_res:
-
         captor_data = {
             '_id': _id,
             'cookies': cookies,
@@ -1091,15 +1068,15 @@ def detail(self, tmp_data):
     bid_data['orign_link'] = orign_link
     bid_data['bid_detail'] = bid_detail
 
-
     moenApp.send_task('bid.jianyu.clean', args=(json.dumps(bid_data),), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                      retry_policy={
+                          'max_retries': 5,
+                          'interval_start': 0,
+                          'interval_step': 0.2,
+                          'interval_max': 0.2,
+                      }, )
     print(f'send to clean: {bid_data}')
+
 
 @moenApp.task(
     name='bid.jianyu.clean',
@@ -1139,8 +1116,6 @@ def data_clean(self, tmp_data):
     item['invite_company'] = ''
     item['win_company'] = ''
     item['agency_company'] = ''
-
-
 
     pro = data.get('area')
     if pro and pro != '全国':
@@ -1184,15 +1159,13 @@ def data_clean(self, tmp_data):
     item['filepath'] = upload_us3(item)
     str_data = json.dumps(item)
 
-
-
     moenApp.send_task('bid.jianyu.zoo', args=(str_data,), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                      retry_policy={
+                          'max_retries': 5,
+                          'interval_start': 0,
+                          'interval_step': 0.2,
+                          'interval_max': 0.2,
+                      }, )
     print(f'send to zoo: {item}')
     item['tender_time'] = 31507200000
 
@@ -1202,20 +1175,20 @@ def data_clean(self, tmp_data):
     final_data = {
         "version": 1,
         "trace_sn": str(next_id),
-        "timestamp": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]+time.strftime('%z', time.localtime()),
+        "timestamp": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + time.strftime('%z',
+                                                                                                   time.localtime()),
         "data_type": "spider_bid",
         "data": item
     }
 
-
     str_data = json.dumps(final_data)
     moenApp.send_task('bid.jianyu.kfk', args=(str_data,), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                      retry_policy={
+                          'max_retries': 5,
+                          'interval_start': 0,
+                          'interval_step': 0.2,
+                          'interval_max': 0.2,
+                      }, )
     print(f'send to kfk: {final_data}')
 
     #
@@ -1223,6 +1196,7 @@ def data_clean(self, tmp_data):
     #     log.warning(item)
     #
     #     raise ValueError
+
 
 @moenApp.task(
     name='bid.zhiliao.clean',
@@ -1298,12 +1272,12 @@ def data_clean_zhiliao(self, tmp_data):
 
     print(item)
     moenApp.send_task('bid.jianyu.zoo', args=(str_data,), retry=True,
-            retry_policy={
-                'max_retries': 5,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            },)
+                      retry_policy={
+                          'max_retries': 5,
+                          'interval_start': 0,
+                          'interval_step': 0.2,
+                          'interval_max': 0.2,
+                      }, )
     # moenApp.send_task('bid.jianyu.kfk', args=(str_data,))
 
 
@@ -1370,6 +1344,7 @@ def keep_kfk(self, tmp_data):
 93以前是ascii的
 """
 
+
 @moenApp.task(
     name='bid.jianyu.captor_cookies',
     bind=True,
@@ -1424,23 +1399,24 @@ def captor(self, tmp_data):
 
     img_byte = gen_img(word, imgdata)
 
-
     data = cjy(img_byte)
     cross_car(data, _id, cookies)
 
-def count_zl_title(title, date):
 
+def count_zl_title(title, date):
     if '_' in date:
         date = date.split('_')[0]
 
-    key = "jianyu:zl_title:"+date
+    key = "jianyu:zl_title:" + date
     rds_206_11.sadd(key, title)
+
 
 def count_keyword(keyword, count):
     date = datetime.datetime.today().strftime('%Y-%m-%d')
 
-    key = "jianyu:jy_keyword:"+date
+    key = "jianyu:jy_keyword:" + date
     rds_206_11.hset(key, keyword, count)
+
 
 def upload_us3(item):
     uuid = item['uuid']
@@ -1463,6 +1439,7 @@ def upload_us3(item):
             time.sleep(0.05)
     return None
 
+
 class UfileOss(object):
     public_key = '4eXwD7vhEE5Ln9TGMvGARl30U9dau3Zq5'  # 账户公钥
     private_key = 'KK64s7lhLtrHx50cbD02cB1yli6DRguJwIHz2jpQ0x38'  # 账户私钥
@@ -1471,19 +1448,19 @@ class UfileOss(object):
     def __init__(self):
         self.ufile_handler = filemanager.FileManager(self.public_key, self.private_key)
 
-    def upload_file(self, put_key,local_file):
+    def upload_file(self, put_key, local_file):
         '''普通文件上传'''
         ret, resp = self.ufile_handler.putfile(self.bucket, put_key, local_file, header=None)
         assert resp.status_code == 200
 
-    def upload_bytesIO(self, file, content,mime_type=None):
+    def upload_bytesIO(self, file, content, mime_type=None):
         '''二进制上传'''
         bio = BytesIO(content)
-        ret, resp = self.ufile_handler.putstream(self.bucket, file, bio,mime_type=mime_type)
+        ret, resp = self.ufile_handler.putstream(self.bucket, file, bio, mime_type=mime_type)
         assert resp.status_code == 200
 
-def gen_img(word, imgdata):
 
+def gen_img(word, imgdata):
     img = cv2.imdecode(np.frombuffer(imgdata, np.uint8), cv2.IMREAD_COLOR)
     # # # 将bgr转为rbg
     # imgBGR = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -1513,18 +1490,19 @@ def gen_img(word, imgdata):
 
     return np.array(cv2.imencode('.jpg', imgPutText)[1]).tobytes()
 
+
 def cjy(im):
-    chaojiying = Chaojiying_Client('qi2017', '316952817qwe', '901155')	#用户中心>>软件ID 生成一个替换 96001
+    chaojiying = Chaojiying_Client('qi2017', '316952817qwe', '901155')  # 用户中心>>软件ID 生成一个替换 96001
     # chaojiying = Chaojiying_Client('useful', 'useful', '945901')	#用户中心>>软件ID 生成一个替换 96001
     # im = open('test_result.jpg', 'rb').read()													#本地图片文件路径 来替换 a.jpg 有时WIN系统须要//
-    result = chaojiying.PostPic(im, 9103)	#1902 验证码类型  官方网站>>价格体系 3.4+版 print 后要加()
+    result = chaojiying.PostPic(im, 9103)  # 1902 验证码类型  官方网站>>价格体系 3.4+版 print 后要加()
     # data = json.loads(result)
     pos = result['pic_str'].replace('|', ';')
     print('pos: ', pos)
     return pos
 
-def cross_car(pos, _id, cookies):
 
+def cross_car(pos, _id, cookies):
     headers = {
         'authority': 'www.jianyu360.cn',
         'accept': 'application/json, text/javascript, */*; q=0.01',
@@ -1547,8 +1525,6 @@ def cross_car(pos, _id, cookies):
         'x-requested-with': 'XMLHttpRequest',
     }
 
-
-
     params = {
         'kds': '大数据',
     }
@@ -1565,23 +1541,26 @@ def cross_car(pos, _id, cookies):
         cookies=cookies, headers=headers, data=data)
     print('发送验证', response.content.decode())
 
+
 def sign(data):
     str_md5 = hashlib.md5(data.encode(encoding='utf-8')).hexdigest()
     return str_md5
 
+
 def get_cookies():
     for i in range(50):
-        phone = rds_206_11.rpop('jianyu:account_spider').decode()
+        phone = rds_206_11.rpop('jianyu:account_spider_tmp').decode()
         print(phone)
 
-        number = rds_206_11.hget('jianyu:cookies_count', phone).decode()
+        number = rds_206_11.hget('jianyu:cookies_count_tmp', phone).decode()
         if int(number) < 1500:
-            rds_206_11.lpush('jianyu:account_spider', phone)
+            rds_206_11.lpush('jianyu:account_spider_tmp', phone)
             cookies = json.loads(rds_206_11.hget('jianyu:cookies', phone).decode())
             print(cookies)
             return phone, cookies
     print('没有cookies了')
     return None, None
+
 
 def get_proxy_ip(key):
     num = random.randint(0, 19)
@@ -1596,8 +1575,8 @@ def get_proxy_ip(key):
     }
     return ip
 
-def in_limit(dt):
 
+def in_limit(dt):
     today = datetime.datetime.today()
     limit_date = (today - datetime.timedelta(days=2)).strftime('%Y-%m-%d')
     # print(limit_date)
@@ -1612,6 +1591,7 @@ def in_limit(dt):
     # print(timestamp)  # 1672540205.0
     return timestamp >= limit_timestamp
 
+
 def save_crawled_id(item):
     url = item.get('other')
     if not url: print('error: no url')
@@ -1621,6 +1601,7 @@ def save_crawled_id(item):
         rds_206_11.sadd(f'jianyu:crawled_id_{datetime.date.today()}', _id[0])
     else:
         print('error: no id', item)
+
 
 def get_zero_time(num=2):
     """
@@ -1645,11 +1626,12 @@ def get_zero_time(num=2):
     timestamp = previous_day_midnight.timestamp()
     return int(timestamp)
 
+
 class Chaojiying_Client(object):
 
     def __init__(self, username, password, soft_id):
         self.username = username
-        password =  password.encode('utf8')
+        password = password.encode('utf8')
         self.password = md5(password).hexdigest()
         self.soft_id = soft_id
         self.base_params = {
@@ -1672,7 +1654,8 @@ class Chaojiying_Client(object):
         }
         params.update(self.base_params)
         files = {'userfile': ('ccc.jpg', im)}
-        r = requests.post('http://upload.chaojiying.net/Upload/Processing.php', data=params, files=files, headers=self.headers)
+        r = requests.post('http://upload.chaojiying.net/Upload/Processing.php', data=params, files=files,
+                          headers=self.headers)
         return r.json()
 
     def PostPic_base64(self, base64_str, codetype):
@@ -1682,7 +1665,7 @@ class Chaojiying_Client(object):
         """
         params = {
             'codetype': codetype,
-            'file_base64':base64_str
+            'file_base64': base64_str
         }
         params.update(self.base_params)
         r = requests.post('http://upload.chaojiying.net/Upload/Processing.php', data=params, headers=self.headers)
@@ -1698,6 +1681,7 @@ class Chaojiying_Client(object):
         params.update(self.base_params)
         r = requests.post('http://upload.chaojiying.net/Upload/ReportError.php', data=params, headers=self.headers)
         return r.json()
+
 
 def test_captor():
     html = """
@@ -2025,11 +2009,9 @@ window.location.reload();
     data = json.dumps(captor_data)
     captor(data)
 
+
 if __name__ == '__main__':
-
-
     # test_captor()
-
 
     # keep_date('')
 
@@ -2051,52 +2033,75 @@ if __name__ == '__main__':
     #     print('mei')
     # print(in_limit('2023-01-31'))
     item = {
-        'url':'https://www.jianyu360.cn/article/content/ABCY1xGYS4%2FLyg4GWN1cE8sDzMoFjRmYXxzKDg0Ni4wUX5wHCdUCaY%3D.html'
+        'url': 'https://www.jianyu360.cn/article/content/ABCY1xGYS4%2FLyg4GWN1cE8sDzMoFjRmYXxzKDg0Ni4wUX5wHCdUCaY%3D.html'
     }
     # save_crawled_id(item)
 
     # res = rds_206_11.sadd('jianyu:in_quee', '111')
     # print(type(res))
 
-
     data1 = [
         {'_id': 'ABCY1xGYz0vIys4JGt1cE8sDzMoFjRmYXxzKz8CPT0eVmlzdCdUCdg%3D', 'area': '北京', 'city': '北京市',
-         'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示', 'subtype': '单一',
+         'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示',
+         'subtype': '单一',
          'site': '中国中化集团有限公司商务电子招投标平台'},
         {'_id': 'ABCY1xGYz0vJD07EnN1cE8sDzMoFjRmYXxzKz8CPSE3aGlzdl5UCiw%3D', 'area': '福建', 'city': '厦门市',
-         'publishtime': 1673940800, 'title': '厦门万翔-（公开招标）-XM2022-TZ0738厦门市电子证照共享库管理平台升级及可信文件管理子系统结果公示', 'subtype': '成交',
+         'publishtime': 1673940800,
+         'title': '厦门万翔-（公开招标）-XM2022-TZ0738厦门市电子证照共享库管理平台升级及可信文件管理子系统结果公示',
+         'subtype': '成交',
          'site': '厦门招投标网'},
         {'_id': 'ABCY1xGYz0vJD07An93cFxbCzMCEjJ3XGB1KDgFIyEgcFVzfj9UCc0%3D', 'area': '辽宁', 'city': '大连市',
-         'publishtime': 1673940760, 'title': '【长海县】【单一来源公示】“智慧平安海岛”租赁视频、Ais及雷达数据项目单一来源公示', 'subtype': '单一',
+         'publishtime': 1673940760,
+         'title': '【长海县】【单一来源公示】“智慧平安海岛”租赁视频、Ais及雷达数据项目单一来源公示', 'subtype': '单一',
          'site': '北京隆道网络科技有限公司'},
         {'_id': 'ABCY1xGYz0vJDwsRHt3cFxbCzMCEjJ3XGB1KDgFIyFFWlFzZD9UCew%3D', 'area': '四川', 'city': '成都市',
-         'publishtime': 1673940495, 'title': '成都崇州大数据国家新型工业示范园区建设项目—配套生活服务用房（数智林盘）工程施工/标段合同公告', 'subtype': '合同',
+         'publishtime': 1673940495,
+         'title': '成都崇州大数据国家新型工业示范园区建设项目—配套生活服务用房（数智林盘）工程施工/标段合同公告',
+         'subtype': '合同',
          'site': '成都市公共资源交易服务中心'},
         {'_id': 'ABCY1xGYz0vJD06GXt1cE8sDzMoFjRmYXxzKz8CPS8ecGdzfjNUChI%3D', 'area': '福建', 'city': '厦门市',
-         'publishtime': 1673940373, 'title': '厦门中实-公开招标-2022-ZS2566-“互联网+监管”系统建设项目-中标结果公示', 'subtype': '成交',
+         'publishtime': 1673940373, 'title': '厦门中实-公开招标-2022-ZS2566-“互联网+监管”系统建设项目-中标结果公示',
+         'subtype': '成交',
          'site': '中国政府采购网'},
         {'_id': 'ABCY1xGYz0vJDwvAnt3cFxbCzMCEjJ3XGB1KDgFIyENZGhzfCdUCZY%3D', 'area': '福建', 'city': '厦门市',
-         'publishtime': 1673940348, 'title': '厦门中实-公开招标-2022-ZS2565-市监优化营商环境配套项目（2022）-中标结果公示', 'subtype': '成交',
+         'publishtime': 1673940348,
+         'title': '厦门中实-公开招标-2022-ZS2565-市监优化营商环境配套项目（2022）-中标结果公示', 'subtype': '成交',
          'site': '中国政府采购网'}
 
     ]
 
     data2 = {'_id': 'ABCY1xGYz0vIys4JGt1cE8sDzMoFjRmYXxzKz8CPT0eVmlzdCdUCdg%3D', 'area': '北京', 'city': '北京市',
-         'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示', 'subtype': '单一',
-         'site': '中国中化集团有限公司商务电子招投标平台'}
+             'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示',
+             'subtype': '单一',
+             'site': '中国中化集团有限公司商务电子招投标平台'}
 
-    data2 =  {'_id': 'ABCY1xFdTIFAjYvRGd3cFxbCzMCEjJ3XGB1KT87LyE3fFFzbwVUCb4%3D', 'area': '云南', 'city': '红河哈尼族彝族自治州',
-              'publishtime': 1678781541, 'title': '关于为【蒙自市雨过铺中心学校】公开选取【工程监理】机构的公告', 'subtype': '竞价',
-              'site': '云南省投资审批中介超市'}
-    data2 = {'_id': 'ABCY1xGYD0eIyw7NFF6Z3UvJjIoFRFjXGh1Pw44PTogXmlzfiNUCeE%3D', 'area': '浙江', 'city': '绍兴市', 'publishtime': 1677053572, 'title': '耀华建设管理有限公司关于绍兴市疾病预防控制中心公共卫生>信息化系统维护及结核病信息维护项目单一来源采购的公示', 'subtype': '单一', 'site': '浙江政府采购网'}
+    data2 = {'_id': 'ABCY1xFdTIFAjYvRGd3cFxbCzMCEjJ3XGB1KT87LyE3fFFzbwVUCb4%3D', 'area': '云南',
+             'city': '红河哈尼族彝族自治州',
+             'publishtime': 1678781541, 'title': '关于为【蒙自市雨过铺中心学校】公开选取【工程监理】机构的公告',
+             'subtype': '竞价',
+             'site': '云南省投资审批中介超市'}
+    data2 = {'_id': 'ABCY1xGYD0eIyw7NFF6Z3UvJjIoFRFjXGh1Pw44PTogXmlzfiNUCeE%3D', 'area': '浙江', 'city': '绍兴市',
+             'publishtime': 1677053572,
+             'title': '耀华建设管理有限公司关于绍兴市疾病预防控制中心公共卫生>信息化系统维护及结核病信息维护项目单一来源采购的公示',
+             'subtype': '单一', 'site': '浙江政府采购网'}
 
     # require_detail(json.dumps(data2))
 
-    data3 = {'_id': 'ABCY1xGYz0vIys4JGt1cE8sDzMoFjRmYXxzKz8CPT0eVmlzdCdUCdg%3D', 'area': '北京', 'city': '北京市', 'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示', 'subtype': '单一', 'site': '中国中化集团有限公司商务电子招投标平台', 'orign_link': 'http://e.sinochemitc.com/cms/channel/ywgg1hw/124978.htm', 'bid_detail': '<div id="tab1">\n\t\t\t\t\t<div class="com-detail">\n\t\t\t\t\t\t1. 项目名称：北京银行数字化转型9号工程-“京客图谱”项目<br>2. 采购人名称：北京银行股份有限公司<br>3. 采购人地址：北京市东城区和平里东街1号<br>4. 本项目资金来源：企业自筹资金<br>5. 本次采购内容为：本项目是需要供应商通过大数据平台对商机数据进行加工处理。<br>6. 拟采购方式：单一来源<br>7. 拟采购供应商名称：北京东方国信科技股份有限公司<br>8. 拟采购供应商地址：北京市朝阳区创达三路1号院1号楼7层101<br>9. 论证专家成员：<br><table border="1"><tbody><tr><td>序号<br></td><td>姓名<br></td><td>职称<br></td></tr><tr><td>1<br></td><td>张爱恭<br></td><td>高级工程师<br></td></tr><tr><td>2<br></td><td>赵刚<br></td><td>高级工程师<br></td></tr><tr><td>3<br></td><td>杨宁<br></td><td>高级工程师<br></td></tr></tbody></table><br>10. 论证专家意见：<br>中化商务有限公司于2023年1月17日在北京复兴门外大街A2号西城金茂中心组织了相关专家对该项目需求文件及建议采购方式进行了论证。<br>经论证，专家组成员一致认为该项目需求文件完整，单一来源理由充分。<br>11. 公示期：2023年1月17日至2023年1月29日，共计5个工作日。潜在供应商对公示内容有异议的，请于公示期内将书面意见反馈至中化商务有限公司，书面文件包括：<br>? 有效的营业执照或事业单位法人证明复印件；<br>? 法定代表人授权书（如由授权代理人提出异议的）；<br>? 异议单位情况介绍（包括但不限于供应商名称、联系人、联系电话、联系邮箱等）；异议说明、能够完成本项目的声明及证明材料。<br>以上内容均需加盖公章。<br>代理机构：中化商务有限公司<br>地    址：北京复兴门外大街A2号西城金茂中心（邮编：100045）<br>业务联系人：唐昱<br>电    话：18310298572<br>传    真：010-59369323<br>电子邮箱：tangyu10@sinochem.com\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t'}
+    data3 = {'_id': 'ABCY1xGYz0vIys4JGt1cE8sDzMoFjRmYXxzKz8CPT0eVmlzdCdUCdg%3D', 'area': '北京', 'city': '北京市',
+             'publishtime': 1673940925, 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示',
+             'subtype': '单一', 'site': '中国中化集团有限公司商务电子招投标平台',
+             'orign_link': 'http://e.sinochemitc.com/cms/channel/ywgg1hw/124978.htm',
+             'bid_detail': '<div id="tab1">\n\t\t\t\t\t<div class="com-detail">\n\t\t\t\t\t\t1. 项目名称：北京银行数字化转型9号工程-“京客图谱”项目<br>2. 采购人名称：北京银行股份有限公司<br>3. 采购人地址：北京市东城区和平里东街1号<br>4. 本项目资金来源：企业自筹资金<br>5. 本次采购内容为：本项目是需要供应商通过大数据平台对商机数据进行加工处理。<br>6. 拟采购方式：单一来源<br>7. 拟采购供应商名称：北京东方国信科技股份有限公司<br>8. 拟采购供应商地址：北京市朝阳区创达三路1号院1号楼7层101<br>9. 论证专家成员：<br><table border="1"><tbody><tr><td>序号<br></td><td>姓名<br></td><td>职称<br></td></tr><tr><td>1<br></td><td>张爱恭<br></td><td>高级工程师<br></td></tr><tr><td>2<br></td><td>赵刚<br></td><td>高级工程师<br></td></tr><tr><td>3<br></td><td>杨宁<br></td><td>高级工程师<br></td></tr></tbody></table><br>10. 论证专家意见：<br>中化商务有限公司于2023年1月17日在北京复兴门外大街A2号西城金茂中心组织了相关专家对该项目需求文件及建议采购方式进行了论证。<br>经论证，专家组成员一致认为该项目需求文件完整，单一来源理由充分。<br>11. 公示期：2023年1月17日至2023年1月29日，共计5个工作日。潜在供应商对公示内容有异议的，请于公示期内将书面意见反馈至中化商务有限公司，书面文件包括：<br>? 有效的营业执照或事业单位法人证明复印件；<br>? 法定代表人授权书（如由授权代理人提出异议的）；<br>? 异议单位情况介绍（包括但不限于供应商名称、联系人、联系电话、联系邮箱等）；异议说明、能够完成本项目的声明及证明材料。<br>以上内容均需加盖公章。<br>代理机构：中化商务有限公司<br>地    址：北京复兴门外大街A2号西城金茂中心（邮编：100045）<br>业务联系人：唐昱<br>电    话：18310298572<br>传    真：010-59369323<br>电子邮箱：tangyu10@sinochem.com\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t'}
 
     # data_clean(json.dumps(data3))
 
-    data4 = {'uuid': 'c61688a3c30ea93ea7d06e5d645235cc', 'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示', 'notice_type': 1, 'bid_type': '单一公告', 'pub_province': '北京市', 'pub_city': '北京市', 'pub_time': '2023-01-17', 'money': '', 'notice_detail': '<div id="tab1">\n\t\t\t\t\t<div class="com-detail">\n\t\t\t\t\t\t1. 项目名称：北京银行数字化转型9号工程-“京客图谱”项目<br>2. 采购人名称：北京银行股份有限公司<br>3. 采购人地址：北京市东城区和平里东街1号<br>4. 本项目资金来源：企业自筹资金<br>5. 本次采购内容为：本项目是需要供应商通过大数据平台对商机数据进行加工处理。<br>6. 拟采购方式：单一来源<br>7. 拟采购供应商名称：北京东方国信科技股份有限公司<br>8. 拟采购供应商地址：北京市朝阳区创达三路1号院1号楼7层101<br>9. 论证专家成员：<br><table border="1"><tbody><tr><td>序号<br></td><td>姓名<br></td><td>职称<br></td></tr><tr><td>1<br></td><td>张爱恭<br></td><td>高级工程师<br></td></tr><tr><td>2<br></td><td>赵刚<br></td><td>高级工程师<br></td></tr><tr><td>3<br></td><td>杨宁<br></td><td>高级工程师<br></td></tr></tbody></table><br>10. 论证专家意见：<br>中化商务有限公司于2023年1月17日在北京复兴门外大街A2号西城金茂中心组织了相关专家对该项目需求文件及建议采购方式进行了论证。<br>经论证，专家组成员一致认为该项目需求文件完整，单一来源理由充分。<br>11. 公示期：2023年1月17日至2023年1月29日，共计5个工作日。潜在供应商对公示内容有异议的，请于公示期内将书面意见反馈至中化商务有限公司，书面文件包括：<br>? 有效的营业执照或事业单位法人证明复印件；<br>? 法定代表人授权书（如由授权代理人提出异议的）；<br>? 异议单位情况介绍（包括但不限于供应商名称、联系人、联系电话、联系邮箱等）；异议说明、能够完成本项目的声明及证明材料。<br>以上内容均需加盖公章。<br>代理机构：中化商务有限公司<br>地    址：北京复兴门外大街A2号西城金茂中心（邮编：100045）<br>业务联系人：唐昱<br>电    话：18310298572<br>传    真：010-59369323<br>电子邮箱：tangyu10@sinochem.com\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t', 'url': 'http://e.sinochemitc.com/cms/channel/ywgg1hw/124978.htm', 'doc': '', 'source_name': '测试剑鱼', 'other': ''}
+    data4 = {'uuid': 'c61688a3c30ea93ea7d06e5d645235cc',
+             'title': '北京银行数字化转型9号工程-“京客图谱”项目单一来源采购公示', 'notice_type': 1,
+             'bid_type': '单一公告', 'pub_province': '北京市', 'pub_city': '北京市', 'pub_time': '2023-01-17',
+             'money': '',
+             'notice_detail': '<div id="tab1">\n\t\t\t\t\t<div class="com-detail">\n\t\t\t\t\t\t1. 项目名称：北京银行数字化转型9号工程-“京客图谱”项目<br>2. 采购人名称：北京银行股份有限公司<br>3. 采购人地址：北京市东城区和平里东街1号<br>4. 本项目资金来源：企业自筹资金<br>5. 本次采购内容为：本项目是需要供应商通过大数据平台对商机数据进行加工处理。<br>6. 拟采购方式：单一来源<br>7. 拟采购供应商名称：北京东方国信科技股份有限公司<br>8. 拟采购供应商地址：北京市朝阳区创达三路1号院1号楼7层101<br>9. 论证专家成员：<br><table border="1"><tbody><tr><td>序号<br></td><td>姓名<br></td><td>职称<br></td></tr><tr><td>1<br></td><td>张爱恭<br></td><td>高级工程师<br></td></tr><tr><td>2<br></td><td>赵刚<br></td><td>高级工程师<br></td></tr><tr><td>3<br></td><td>杨宁<br></td><td>高级工程师<br></td></tr></tbody></table><br>10. 论证专家意见：<br>中化商务有限公司于2023年1月17日在北京复兴门外大街A2号西城金茂中心组织了相关专家对该项目需求文件及建议采购方式进行了论证。<br>经论证，专家组成员一致认为该项目需求文件完整，单一来源理由充分。<br>11. 公示期：2023年1月17日至2023年1月29日，共计5个工作日。潜在供应商对公示内容有异议的，请于公示期内将书面意见反馈至中化商务有限公司，书面文件包括：<br>? 有效的营业执照或事业单位法人证明复印件；<br>? 法定代表人授权书（如由授权代理人提出异议的）；<br>? 异议单位情况介绍（包括但不限于供应商名称、联系人、联系电话、联系邮箱等）；异议说明、能够完成本项目的声明及证明材料。<br>以上内容均需加盖公章。<br>代理机构：中化商务有限公司<br>地    址：北京复兴门外大街A2号西城金茂中心（邮编：100045）<br>业务联系人：唐昱<br>电    话：18310298572<br>传    真：010-59369323<br>电子邮箱：tangyu10@sinochem.com\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t',
+             'url': 'http://e.sinochemitc.com/cms/channel/ywgg1hw/124978.htm', 'doc': '', 'source_name': '测试剑鱼',
+             'other': ''}
 
     # i = random.randint(1,8)
     # producer = Kafka_producer(KAFAKA_HOST, KAFAKA_PORT, KAFAKA_TOPIC, i)
@@ -2144,5 +2149,5 @@ docker network create --subnet 172.26.16.0/24 \
 --opt com.docker.network.bridge.enable_ip_masquerade=true \
 docker_gwbridge
 
-    
+
     """

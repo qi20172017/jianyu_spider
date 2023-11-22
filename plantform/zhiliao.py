@@ -18,13 +18,23 @@ from app.moen_app import moenApp
 import json
 from sonyflake import SonyFlake
 import datetime
-from model.rds import rds_206_11
+from model.rds import rds_206_11, rds_206_06
 from common.config import judge_notice_type, single_province
 from common.us import UfileOss
 import os
 # from common.us import upload_us3
 test = False
-
+# def get_proxy(cls):
+#     num = random.randint(0, 9)
+#     # print(num)
+#     proxy = list(rds_206_06.hgetall(f'proxy:asy_{str(num)}').keys())[0]
+#     # print(proxy)
+#     ip = proxy.decode()
+#     ip = {
+#         'http': 'http://' + ip,
+#         'https': 'https://' + ip,
+#     }
+#     return ip
 @moenApp.task(
     name='bid.zhiliao.search',
     bind=True,
@@ -53,10 +63,12 @@ def search(self, data):
         # 'searchScope': '1',  # 综合 没有综合这个选项了
         'matchMode': '1',   # 智能匹配
     }
-
+    # proxy = get_proxy('')
     params = deal_params(params)
     headers = deal_headers(token)
-    response = requests.get('https://api-service-zhiliao.bailian-ai.com/search/bid', params=params, headers=headers)
+    response = requests.get('https://api-service-zhiliao.bailian-ai.com/search/bid', params=params,
+                            # proxies=proxy,
+                            headers=headers)
 
     rds_206_11.hincrby('zhiliao:cookies_count', phone)
 
@@ -143,10 +155,11 @@ def zhiliao_detail(self, data):
     params = {
         'clickIndex': '1',
     }
-
+    # proxy = get_proxy('')
     response = requests.get(url, params=params,
                             cookies=cookies,
                             verify=False,
+                            # proxies=proxy,
                             headers=headers)
 
     rds_206_11.hincrby('zhiliao:cookies_count', phone)
@@ -180,7 +193,7 @@ def zhiliao_detail(self, data):
         print(content)
 
     else:
-        content = ''
+        content = response.text
 
     bid_data = {}
     bid_data['publishtime'] = data['pubTime']
@@ -277,7 +290,9 @@ def downlond(pdf_url):
         'sec-ch-ua-platform': '"macOS"',
     }
     # 'https://bid.snapshot.qudaobao.com.cn/6637ba012078a3d65e3eda9ba7bb33470d00eead.pdf'
+    # proxy = get_proxy('')
     response = requests.get(pdf_url,
+                            # proxies=proxy,
                             headers=headers)
 
     return response.content
@@ -420,24 +435,25 @@ def get_cookies():
 
 
 if __name__ == '__main__':
-    # a = crawled('伊犁州消防救援支队关于编程开发软件的网上超市采购项目成交公告', '2023-05-17')
+    a = crawled('伊犁州消防救援支队关于编程开发软件的网上超市采购项目成交公告', '2023-05-17')
 
     # print(a)
 
-    data = json.dumps({
-        'keyword': '宁夏回族自治区商务厅',
-        'page': 1,
-        'date': '2023-05-19'
-    })
-
-    search(data)
-
-    data1 = json.dumps({
-        'id': '489133117',
-        'pubTime': '2023-05-14',
-        'bidType': 1,
-        'titleText': '鹤壁职业技术学院超融合高性能计算云平台项目2023年5至6月政府采购意向'
-    })
-
-    # zhiliao_detail(data1)
-
+    # data = json.dumps({
+    #     'keyword': '宁夏回族自治区商务厅',
+    #     'page': 1,
+    #     'date': '2023-05-19'
+    # })
+    #
+    # search(data)
+    #
+    # data1 = json.dumps({
+    #     'id': '489133117',
+    #     'pubTime': '2023-05-14',
+    #     'bidType': 1,
+    #     'titleText': '鹤壁职业技术学院超融合高性能计算云平台项目2023年5至6月政府采购意向'
+    # })
+    #
+    # # zhiliao_detail(data1)
+    #
+    # print(get_proxy(''))
