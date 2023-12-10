@@ -325,7 +325,7 @@ def zl_search_keyword(self, data):
     if next_page and int(page) <2:
 
         mq_data['page'] = int(page) + 1
-        next_data = json.dumps(params)
+        next_data = json.dumps(mq_data)
         print(f'翻页：{next_data}')
         moenApp.send_task('bid.jianyu.zl_search_keyword', args=(next_data,), retry=True,
             retry_policy={
@@ -341,7 +341,7 @@ def zl_search_keyword(self, data):
     name='bid.jianyu.search',
     bind=True,
     acks_late=True,
-    rate_limit='2/s',
+    rate_limit='6/s',
     retry_kwargs={
         "max_retries": 20,
         "default_retry_delay": 30
@@ -354,12 +354,12 @@ def search(self, data):
     keyword = data['keyword']
     area = data['area']
 
-    phone, cookies = get_cookies_history()
-    if not phone:
-        print('没有cookies了')
-        moenApp.send_task('bid.jianyu.search', args=(json.dumps(data),))
-        time.sleep(60)
-        return
+    # phone, cookies = get_cookies_history()
+    # if not phone:
+    #     print('没有cookies了')
+    #     moenApp.send_task('bid.jianyu.search', args=(json.dumps(data),))
+    #     time.sleep(60)
+    #     return
 
 
     headers = {
@@ -381,15 +381,40 @@ def search(self, data):
         'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
     }
 
+    # data = {
+    #     'pageNumber': page,
+    #     'pageSize': '100',
+    #     'reqType': 'bidSearch',
+    #     'searchvalue': keyword,
+    #     'area': area,
+    #     'subtype': '',
+    #     'publishtime': 'lately-7',
+    #     'selectType': 'content,file,title',
+    #     'minprice': '',
+    #     'maxprice': '',
+    #     'industry': '',
+    #     'tabularflag': 'Y',
+    #     'buyerclass': '',
+    #     'buyertel': '',
+    #     'winnertel': '',
+    #     'notkey': '',
+    #     'fileExists': '0',
+    #     'city': '',
+    #     'searchGroup': '1',
+    #     'searchMode': '0',  # 20231118 0表示精准搜索
+    #     'wordsMode': '0',
+    #     'additionalWords': '',
+    # }
+
     data = {
         'pageNumber': page,
         'pageSize': '100',
         'reqType': 'bidSearch',
         'searchvalue': keyword,
-        'area': area,
+        'area': '',
         'subtype': '',
-        'publishtime': 'lately-7',
-        'selectType': 'content,file,title',
+        'publishtime': 'thisyear',
+        'selectType': 'content,title',
         'minprice': '',
         'maxprice': '',
         'industry': '',
@@ -400,24 +425,25 @@ def search(self, data):
         'notkey': '',
         'fileExists': '0',
         'city': '',
-        'searchGroup': '1',
-        'searchMode': '0',  # 20231118 0表示精准搜索
+        'searchGroup': '0',
+        'searchMode': '0',
         'wordsMode': '0',
         'additionalWords': '',
     }
+
     url = 'https://www.jianyu360.cn/front/pcAjaxReq'
-    proxies = get_proxy_ip('')
+    # proxies = get_proxy_ip('')
     try:
         response = requests.post(
             url,
             data=data,
             verify=False,
             headers=headers,
-            cookies=cookies,
-            proxies=proxies,
+            # cookies=cookies,
+            proxies=Ipool.get_proxy_ip_dm(),
             timeout=15,
         )
-        rds_206_11.hincrby('jianyu:cookies_count_history', phone)
+        # rds_206_11.hincrby('jianyu:cookies_count_history', phone)
         if response.status_code == 702:
             raise ValueError
     except Exception as e:
@@ -484,6 +510,8 @@ def search(self, data):
         # print(data)
         if int(publishtime) < get_zero_time():
             next_page = False
+            print(publishtime, time.strftime("%Y-%m-%d", time.localtime(publishtime)))
+            break
 
         not_inquee = rds_206_11.sadd('jianyu:in_quee', _id)
         rds_206_11.sadd(f'jianyu:in_quee_{datetime.date.today()}', _id)
@@ -494,7 +522,7 @@ def search(self, data):
             continue
 
         if not rds_206_11.sismember('jianyu:crawled_id', _id):
-            print(f'{_id} 有效数据')
+            print(f'{_id} 有效数据 {time.strftime("%Y-%m-%d", time.localtime(publishtime))}')
             moenApp.send_task('bid.jianyu.detail', args=(json.dumps(data),))
             # rds_206_11.hincrby('jianyu:source_classify', f'zl_{today_date}')
         else:
@@ -987,7 +1015,7 @@ def require_detail(self, tmp_data):
     name='bid.jianyu.detail',
     bind=True,
     acks_late=True,
-    rate_limit='7/s', # 处理堆积的时候，把速率限制注释掉
+    rate_limit='2/s', # 处理堆积的时候，把速率限制注释掉
     retry_kwargs={
         "max_retries": 20,
         "default_retry_delay": 30
@@ -997,17 +1025,20 @@ def detail(self, tmp_data):
 
     bid_data = json.loads(tmp_data)
     _id = bid_data['_id']
-    print(_id)
+    publishtime = bid_data.get('publishtime', 0)
+
+    print(f'{_id} : {time.strftime("%Y-%m-%d", time.localtime(publishtime))}')
 
     # 几百万数据堆积后，用这个根据时间区分开
-    # publishtime = bid_data.get('publishtime', 0)
-    #
-    # if int(publishtime) < get_zero_time():
+
+    # if int(publishtime) < get_zero_time(6):
     #     moenApp.send_task('bid.jianyu.history_tmp', args=(json.dumps(bid_data),))
+    #     print(f'时间范围之外：{_id}')
+    #     return
+
     # else:
     #     moenApp.send_task('bid.jianyu.current_tmp', args=(json.dumps(bid_data),))
-    #
-    # return
+
 
 
     if rds_206_11.sismember('jianyu:crawled_id', _id):
@@ -1044,13 +1075,14 @@ def detail(self, tmp_data):
     params = {
         'aside': '0',
     }
+    # Ipool.get_proxy_random()
     try:
         response = requests.get(
             url,
             params=params,
             cookies=cookies,
             headers=headers,
-            proxies=get_proxy_ip(1),
+            proxies=Ipool.get_proxy_ip(),
             stream=True,
             timeout=15
         )
@@ -1079,7 +1111,7 @@ def detail(self, tmp_data):
         moenApp.send_task('bid.jianyu.captor_cookies', args=(json.dumps(captor_data),))
 
         moenApp.send_task('bid.jianyu.detail', args=(json.dumps(bid_data),))
-
+        print(final_res)
         return
 
     data = etree.HTML(response.text)
@@ -1122,7 +1154,7 @@ def detail(self, tmp_data):
     name='bid.jianyu.history_tmp',
     bind=True,
     acks_late=True,
-    rate_limit='5/s',
+    rate_limit='3/s',
     retry_kwargs={
         "max_retries": 20,
         "default_retry_delay": 30
@@ -1650,6 +1682,47 @@ def get_proxy_ip(key):
     }
     return ip
 
+class Ipool:
+
+    @classmethod
+    def get_proxy_ip(cls):
+        num = random.randint(0, 19)
+        field_name = f'ip_{num}'
+        proxy = rds_206_11.hget('ip_pool', field_name)
+        ip = json.loads(proxy.decode())
+        ip = {
+            'http': 'http://' + ip['http'],
+            'https': 'https://' + ip['http'],
+        }
+        print(ip)
+        return ip
+
+    @classmethod
+    def get_proxy_ip_dm(cls):
+        num = random.randint(0, 33)
+        # print(num)
+        field_name = f'ip_{num}'
+        proxy_ip = rds_206_11.hget('ip_pool_dm', field_name).decode()
+
+        username = "18923881404"
+        password = "pachong,1234"
+        ip = {
+            "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip},
+            "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip}
+        }
+        # ip = "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip}
+        print(ip)
+        return ip
+
+    @classmethod
+    def get_proxy_random(cls):
+        num = random.choice([1, 2])
+        if num == 1:
+            return Ipool.get_proxy_ip()
+        else:
+            return Ipool.get_proxy_ip_dm()
+
+
 def in_limit(dt):
 
     today = datetime.datetime.today()
@@ -2088,16 +2161,16 @@ if __name__ == '__main__':
     # keep_date('')
 
     data0 = json.dumps({
-        'keyword': 'fdsfsdfdsds',
+        'keyword': '心理服务站建设项目',
         # 'keyword': '揭阳市榕城区卢前小学计算机设备维修和保养服务服务采购',
         'page': 1,
         'area': ''
     })
     # search_require(data0)
-    # search(data0)
+    search(data0)
     # search_keyword(data0)
     # search(data0)
-    print(get_zero_time())
+    # print(get_zero_time())
     # res = rds_206_11.sismember('jianyu:crawled_id', 'ABCY1xGYS4%2FLyg4GWN1cE8sDzMoFjRmYXxzKDg0Ni4wUX5wHCdUCaY%3D')
     # if res:
     #     print('you')
@@ -2160,7 +2233,7 @@ if __name__ == '__main__':
     # time.sleep(1)
 
     data5 = {
-        'page': 1,
+        'page': 2,
         'count': 49,
         'keyword': '大数据',
     }
@@ -2198,5 +2271,5 @@ docker network create --subnet 172.26.16.0/24 \
 --opt com.docker.network.bridge.enable_ip_masquerade=true \
 docker_gwbridge
 
-    
+    https://www.jianyu360.cn/article/content/ABCY1xBfzIeMyYsAmt4dXIkMDBfDSF3V1JxKC8nKj0neGlzeyNUChQ%3D.html
     """

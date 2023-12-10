@@ -1493,25 +1493,25 @@ def sign(data):
 def send_zl_search_keyword():
 
 
-    key_list = rds_206_11.smembers('jianyu:9w_keyword') # 这个keyword_1里面是过滤了一遍的
-    for key in key_list:
-        key = key.decode()
-        print(key)
-        params = {
-            'page': 1,
-            'count': 29,
-            'keyword': key,
-        }
-
-        moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
-
-    # params = {
-    #     'page': 1,
-    #     'count': 50,
-    #     'keyword': '计算机',
-    # }
+    # key_list = rds_206_11.smembers('jianyu:9w_keyword') # 这个keyword_1里面是过滤了一遍的
+    # for key in key_list:
+    #     key = key.decode()
+    #     print(key)
+    #     params = {
+    #         'page': 1,
+    #         'count': 29,
+    #         'keyword': key,
+    #     }
     #
-    # moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
+    #     moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
+
+    params = {
+        'page': 1,
+        'count': 50,
+        'keyword': '计算机',
+    }
+
+    moenApp.send_task('bid.jianyu.zl_search_keyword', args=(json.dumps(params),))
 
 
 
@@ -1990,10 +1990,10 @@ if __name__ == '__main__':
     # send_jy_require()
 
 
-    send_clean()
+    # send_clean()
 
-    send_zl_search()
-    # send_zl_search_keyword()
+    # send_zl_search()
+    send_zl_search_keyword()
 
     # yesterday = '2023-03-20'
     # count = get_zl_data(yesterday)
