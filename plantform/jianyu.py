@@ -1203,6 +1203,10 @@ def data_clean(self, tmp_data):
         item['url'] = href
     else:
         item['url'] = ''
+    if 'jianyu' in item['url']:
+        item['url'] = ''
+    else:
+        pass
     item['doc'] = ''
     # item['create_time'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     # item['update_time'] = ''

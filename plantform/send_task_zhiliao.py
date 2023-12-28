@@ -17,6 +17,7 @@ def send_zl_search_keyword():
 
 
     key_list = rds_206_11.smembers('zhil_keyword')
+    # key_list = rds_206_11.smembers('zhil_keyword1')
     # key_list = [
     #     '云主机',
     #     '云服务器',
@@ -69,7 +70,11 @@ def send_zl_search_company():
 
 
     company_list = [
-        '',
+        # '北京平凯星辰科技发展有限公司',
+        # '中广核集团',
+        # '青海省卫生健康委员会',
+        '煤炭地质总局',
+        # '天津市地震局',
     ]
 
     date =''
@@ -100,14 +105,15 @@ def last_three_days():
     current_date = datetime.date.today()
 
     # 计算一年前的日期
-    one_year_ago = current_date - datetime.timedelta(days=7)
+    one_year_ago = current_date - datetime.timedelta(days=5)
+    # one_year_ago = current_date - datetime.timedelta(days=3)
 
     # 打印出一年前的每一天的日期
     res = []
     while one_year_ago < current_date:
         one_year_ago += datetime.timedelta(days=1)
         res.append(str(one_year_ago))
-    # return res[:-7]
+    # return res[:-46]
     return res
 
 
