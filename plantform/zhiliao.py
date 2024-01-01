@@ -161,6 +161,7 @@ def zhiliao_detail(self, data):
                             verify=False,
                             # proxies=proxy,
                             headers=headers)
+    if
 
     rds_206_11.hincrby('zhiliao:cookies_count', phone)
 
